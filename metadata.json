@@ -1,0 +1,6 @@
+{
+  "name": "AiPromptXpert",
+  "description": "The official AI prompt library & creative platform by AiMAEditz (M ABID). Discover, generate, copy, and optimize AI prompts, cinematic ideas, Gemini concepts, AI tools, and photo editing tutorials.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
