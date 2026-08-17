@@ -41,19 +41,22 @@ fun PromptLibraryScreen(
 
     val favIds = favorites.map { it.itemId }.toSet()
 
-    val categories = listOf(
-        "All", "Boy Prompts", "Girl Prompts", "Couple Prompts", "Islamic Prompts",
-        "Eid Prompts", "Wedding Prompts", "Cinematic Prompts", "Portrait Prompts",
-        "Luxury Prompts", "Fashion Prompts", "AI Editing", "Photography",
-        "Cars", "Kids", "Nature", "Travel", "Trending", "Gemini", "Other"
-    )
+    val categories = remember {
+        listOf(
+            "All", "Boy Prompts", "Girl Prompts", "Couple Prompts", "Islamic Prompts",
+            "Eid Milad Prompts", "Cinematic Prompts", "8K Prompts", "Luxury Prompts",
+            "Portrait Prompts", "Fashion Prompts", "Car Prompts", "Kids Prompts",
+            "Wedding Prompts", "Travel Prompts", "AI Editing", "Cyberpunk", "Anime Art",
+            "Vintage & Retro", "Google Gemini", "ChatGPT", "Midjourney"
+        )
+    }
 
-    val platforms = listOf("All", "Gemini", "Bing AI", "Midjourney", "DALL-E 3", "ChatGPT")
+    val platforms = remember { listOf("All", "Gemini", "Bing AI", "Midjourney", "DALL-E 3", "ChatGPT") }
 
     val filteredPrompts = remember(allPrompts, searchQuery, selectedCategory, selectedPlatform) {
         allPrompts.filter { prompt ->
-            val matchesCategory = selectedCategory == "All" || prompt.category.equals(selectedCategory, ignoreCase = true)
-            val matchesPlatform = selectedPlatform == "All" || prompt.platform.equals(selectedPlatform, ignoreCase = true)
+            val matchesCategory = selectedCategory == "All" || prompt.category.equals(selectedCategory, ignoreCase = true) || prompt.category.contains(selectedCategory, ignoreCase = true)
+            val matchesPlatform = selectedPlatform == "All" || prompt.platform.equals(selectedPlatform, ignoreCase = true) || prompt.platform.contains(selectedPlatform, ignoreCase = true)
             val matchesQuery = searchQuery.isBlank() ||
                     prompt.title.contains(searchQuery, ignoreCase = true) ||
                     prompt.promptCode.contains(searchQuery, ignoreCase = true) ||
@@ -68,82 +71,82 @@ fun PromptLibraryScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = 14.dp)
     ) {
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
-        // Search Bar
+        // Search Bar (Compact & properly aligned)
         SearchBarInput(
             query = searchQuery,
             onQueryChange = { viewModel.setSearchQuery(it) },
             onSearchExecute = {}
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
-        // Categories Chips with glowing active indicator
+        // Categories Chips
         LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            contentPadding = PaddingValues(end = 8.dp)
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            contentPadding = PaddingValues(end = 6.dp)
         ) {
             items(categories, key = { it }) { category ->
                 val isSelected = selectedCategory == category
                 FilterChip(
                     selected = isSelected,
                     onClick = { viewModel.setCategory(category) },
-                    label = { Text(text = category, fontSize = 12.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal) },
-                    shape = RoundedCornerShape(20.dp),
+                    label = { Text(text = category, fontSize = 11.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal) },
+                    shape = RoundedCornerShape(16.dp),
                     modifier = if (isSelected) {
                         Modifier.subtleGlow(
                             color = MaterialTheme.colorScheme.primary,
-                            radius = 6.dp,
-                            alpha = 0.25f,
-                            cornerRadius = 20.dp
+                            radius = 4.dp,
+                            alpha = 0.2f,
+                            cornerRadius = 16.dp
                         )
                     } else Modifier
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
         // Platform Chips
         LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            contentPadding = PaddingValues(end = 8.dp)
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            contentPadding = PaddingValues(end = 6.dp)
         ) {
             items(platforms, key = { it }) { plat ->
                 val isSelected = selectedPlatform == plat
                 FilterChip(
                     selected = isSelected,
                     onClick = { viewModel.setPlatform(plat) },
-                    label = { Text(text = "Platform: $plat", fontSize = 11.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal) },
-                    shape = RoundedCornerShape(20.dp),
+                    label = { Text(text = "Platform: $plat", fontSize = 10.5.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal) },
+                    shape = RoundedCornerShape(16.dp),
                     modifier = if (isSelected) {
                         Modifier.subtleGlow(
                             color = MaterialTheme.colorScheme.secondary,
-                            radius = 5.dp,
-                            alpha = 0.25f,
-                            cornerRadius = 20.dp
+                            radius = 4.dp,
+                            alpha = 0.2f,
+                            cornerRadius = 16.dp
                         )
                     } else Modifier
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(6.dp))
 
         // Header info count
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 4.dp),
+                .padding(vertical = 2.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = "${filteredPrompts.size} AI Prompts",
-                fontSize = 13.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -155,9 +158,9 @@ fun PromptLibraryScreen(
                         viewModel.setPlatform("All")
                         viewModel.setSearchQuery("")
                     },
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
                 ) {
-                    Text(text = "Clear Filters", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text(text = "Clear Filters", fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -174,19 +177,19 @@ fun PromptLibraryScreen(
                     Icon(
                         imageVector = Icons.Default.SearchOff,
                         contentDescription = null,
-                        modifier = Modifier.size(54.dp),
+                        modifier = Modifier.size(46.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
                     Text(
                         text = "No prompts found for selected filters",
-                        fontSize = 15.sp,
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = "Try clearing filters or searching another keyword",
-                        fontSize = 12.sp,
+                        fontSize = 11.5.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -194,8 +197,8 @@ fun PromptLibraryScreen(
         } else {
             LazyVerticalGrid(
                 columns = GridCells.Adaptive(minSize = 280.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.weight(1f),
                 contentPadding = PaddingValues(bottom = 16.dp)
             ) {

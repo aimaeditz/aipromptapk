@@ -18,6 +18,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -56,13 +59,13 @@ fun BottomNavBar(
         modifier = Modifier.navigationBarsPadding(),
         containerColor = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurface,
-        tonalElevation = 6.dp
+        tonalElevation = 4.dp
     ) {
         items.forEach { screen ->
             val isSelected = currentRoute == screen.route
 
             val iconScale by animateFloatAsState(
-                targetValue = if (isSelected) 1.08f else 1.0f,
+                targetValue = if (isSelected) 1.05f else 1.0f,
                 animationSpec = tween(durationMillis = 140),
                 label = "iconScale"
             )
@@ -84,9 +87,9 @@ fun BottomNavBar(
                                 if (isSelected) {
                                     Modifier.subtleGlow(
                                         color = MaterialTheme.colorScheme.primary,
-                                        radius = 6.dp,
-                                        alpha = 0.25f,
-                                        cornerRadius = 12.dp
+                                        radius = 4.dp,
+                                        alpha = 0.2f,
+                                        cornerRadius = 10.dp
                                     )
                                 } else Modifier
                             ),
@@ -94,15 +97,20 @@ fun BottomNavBar(
                     ) {
                         Icon(
                             imageVector = if (isSelected) screen.selectedIcon else screen.unselectedIcon,
-                            contentDescription = screen.title
+                            contentDescription = screen.title,
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 },
                 label = {
                     Text(
                         text = screen.title,
-                        fontSize = 11.sp,
-                        fontWeight = if (isSelected) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Medium
+                        fontSize = if (screen == Screen.Categories) 9.5.sp else 10.sp,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                        maxLines = 1,
+                        softWrap = false,
+                        textAlign = TextAlign.Center,
+                        overflow = TextOverflow.Clip
                     )
                 },
                 colors = NavigationBarItemDefaults.colors(
