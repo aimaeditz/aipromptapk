@@ -52,33 +52,33 @@ fun PromptCard(
 
     val borderBrush = Brush.verticalGradient(
         colors = listOf(
-            MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
-            MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+            MaterialTheme.colorScheme.outline.copy(alpha = 0.18f),
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
         )
     )
 
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
+            .clip(RoundedCornerShape(16.dp))
             .clickable { onPromptClick() },
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
         border = BorderStroke(1.dp, borderBrush),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.5.dp)
     ) {
         Column {
-            // Image with Badges
+            // Image with Badges (Compact & balanced height)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(185.dp)
+                    .height(155.dp)
             ) {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
                         .data(prompt.imageUrl)
-                        .crossfade(140)
+                        .crossfade(120)
                         .memoryCachePolicy(CachePolicy.ENABLED)
                         .diskCachePolicy(CachePolicy.ENABLED)
                         .build(),
@@ -91,11 +91,11 @@ fun PromptCard(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(60.dp)
+                        .height(50.dp)
                         .background(
                             Brush.verticalGradient(
                                 colors = listOf(
-                                    Color.Black.copy(alpha = 0.55f),
+                                    Color.Black.copy(alpha = 0.50f),
                                     Color.Transparent
                                 )
                             )
@@ -106,37 +106,37 @@ fun PromptCard(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(10.dp),
+                        .padding(8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Surface(
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(6.dp),
                         color = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.onPrimary,
                         modifier = Modifier.subtleGlow(
                             color = MaterialTheme.colorScheme.primary,
-                            radius = 4.dp,
-                            alpha = 0.3f,
-                            cornerRadius = 8.dp
+                            radius = 3.dp,
+                            alpha = 0.25f,
+                            cornerRadius = 6.dp
                         )
                     ) {
                         Text(
                             text = prompt.promptCode,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                            fontSize = 11.sp,
+                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp),
+                            fontSize = 10.5.sp,
                             fontWeight = FontWeight.Black
                         )
                     }
 
                     Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
+                        shape = RoundedCornerShape(6.dp),
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.88f)
                     ) {
                         Text(
                             text = prompt.platform,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                            fontSize = 10.sp,
+                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp),
+                            fontSize = 9.5.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
@@ -148,61 +148,61 @@ fun PromptCard(
                     onClick = onFavoriteClick,
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
-                        .padding(8.dp)
-                        .size(36.dp)
+                        .padding(6.dp)
+                        .size(32.dp)
                         .background(
                             MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
-                            shape = RoundedCornerShape(18.dp)
+                            shape = RoundedCornerShape(16.dp)
                         )
                 ) {
                     Icon(
                         imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
                         contentDescription = "Favorite",
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier.size(16.dp),
                         tint = if (isFavorite) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
                     )
                 }
             }
 
             // Content Details
-            Column(modifier = Modifier.padding(14.dp)) {
+            Column(modifier = Modifier.padding(11.dp)) {
                 // Category Chip
                 Text(
                     text = prompt.category.uppercase(),
-                    fontSize = 10.sp,
+                    fontSize = 9.5.sp,
                     fontWeight = FontWeight.Black,
                     color = MaterialTheme.colorScheme.primary,
-                    letterSpacing = 0.8.sp
+                    letterSpacing = 0.6.sp
                 )
 
-                Spacer(modifier = Modifier.height(3.dp))
+                Spacer(modifier = Modifier.height(2.dp))
 
                 Text(
                     text = prompt.title,
-                    fontSize = 15.sp,
+                    fontSize = 13.5.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
 
-                Spacer(modifier = Modifier.height(3.dp))
+                Spacer(modifier = Modifier.height(2.dp))
 
                 Text(
                     text = prompt.description,
-                    fontSize = 12.sp,
+                    fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
-                    lineHeight = 16.sp
+                    lineHeight = 14.5.sp
                 )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(9.dp))
 
                 // Action Buttons with Instant Copy Feedback Animation
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Button(
@@ -212,22 +212,22 @@ fun PromptCard(
                         },
                         modifier = Modifier
                             .weight(1f)
-                            .height(40.dp)
+                            .height(34.dp)
                             .then(
                                 if (isCopied) {
                                     Modifier.subtleGlow(
                                         color = MaterialTheme.colorScheme.primary,
-                                        radius = 8.dp,
-                                        alpha = 0.35f,
-                                        cornerRadius = 10.dp
+                                        radius = 6.dp,
+                                        alpha = 0.3f,
+                                        cornerRadius = 8.dp
                                     )
                                 } else Modifier
                             ),
-                        shape = RoundedCornerShape(10.dp),
+                        shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = if (isCopied) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary
                         ),
-                        contentPadding = PaddingValues(horizontal = 8.dp)
+                        contentPadding = PaddingValues(horizontal = 6.dp)
                     ) {
                         AnimatedContent(
                             targetState = isCopied,
@@ -243,12 +243,12 @@ fun PromptCard(
                                 Icon(
                                     imageVector = if (copied) Icons.Default.Check else Icons.Default.ContentCopy,
                                     contentDescription = null,
-                                    modifier = Modifier.size(15.dp)
+                                    modifier = Modifier.size(13.dp)
                                 )
-                                Spacer(modifier = Modifier.width(6.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
                                 Text(
                                     text = if (copied) "Copied ✓" else "Copy Prompt",
-                                    fontSize = 12.sp,
+                                    fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold
                                 )
                             }
@@ -257,14 +257,14 @@ fun PromptCard(
 
                     OutlinedButton(
                         onClick = onPromptClick,
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.size(40.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.size(34.dp),
                         contentPadding = PaddingValues(0.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.Visibility,
                             contentDescription = "View",
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(16.dp)
                         )
                     }
                 }

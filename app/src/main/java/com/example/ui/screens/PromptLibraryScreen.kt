@@ -41,17 +41,23 @@ fun PromptLibraryScreen(
 
     val favIds = favorites.map { it.itemId }.toSet()
 
-    val categories = remember {
-        listOf(
-            "All", "Boy Prompts", "Girl Prompts", "Couple Prompts", "Islamic Prompts",
-            "Eid Milad Prompts", "Cinematic Prompts", "8K Prompts", "Luxury Prompts",
-            "Portrait Prompts", "Fashion Prompts", "Car Prompts", "Kids Prompts",
-            "Wedding Prompts", "Travel Prompts", "AI Editing", "Cyberpunk", "Anime Art",
-            "Vintage & Retro", "Google Gemini", "ChatGPT", "Midjourney"
-        )
+    val categories = remember(allPrompts) {
+        val distinct = allPrompts
+            .map { it.category.trim() }
+            .filter { it.isNotBlank() && it != "All" }
+            .distinct()
+            .sorted()
+        listOf("All") + distinct
     }
 
-    val platforms = remember { listOf("All", "Gemini", "Bing AI", "Midjourney", "DALL-E 3", "ChatGPT") }
+    val platforms = remember(allPrompts) {
+        val distinct = allPrompts
+            .map { it.platform.trim() }
+            .filter { it.isNotBlank() && it != "All" }
+            .distinct()
+            .sorted()
+        if (distinct.isEmpty()) listOf("All") else listOf("All") + distinct
+    }
 
     val filteredPrompts = remember(allPrompts, searchQuery, selectedCategory, selectedPlatform) {
         allPrompts.filter { prompt ->

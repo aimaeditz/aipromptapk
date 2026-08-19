@@ -1,196 +1,527 @@
 package com.example.data.remote
 
+import com.example.data.model.GalleryImage
 import com.example.data.model.PromptItem
+import okhttp3.CacheControl
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import org.json.JSONObject
 import java.security.MessageDigest
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
 import java.util.regex.Pattern
 
-class BloggerDataSource(private val apiService: BloggerApiService) {
-
-    suspend fun fetchPromptsFromUrl(feedUrl: String): List<PromptItem> {
-        return try {
-            val response = apiService.getBloggerFeed(feedUrl)
-            val entries = response.feed?.entries ?: return emptyList()
-            val promptList = mutableListOf<PromptItem>()
-
-            for (entry in entries) {
-                val postId = entry.id?.value?.substringAfterLast("post-") ?: System.currentTimeMillis().toString()
-                val postTitle = entry.title?.value ?: "AiPromptXpert Prompt"
-                val rawHtml = entry.content?.value ?: ""
-                val postUrl = entry.link?.firstOrNull { it.rel == "alternate" }?.href ?: feedUrl
-                val categories = entry.categories?.mapNotNull { it.term } ?: emptyList()
-                val category = categories.firstOrNull() ?: determineCategoryFromTitle(postTitle)
-
-                val extracted = parseBloggerContent(postId, postTitle, rawHtml, category, postUrl)
-                promptList.addAll(extracted)
-            }
-            promptList
-        } catch (e: Exception) {
-            e.printStackTrace()
-            emptyList()
-        }
+class BloggerDataSource(
+    private val okHttpClient: OkHttpClient
+) {
+    private val isoDateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).apply {
+        timeZone = TimeZone.getTimeZone("UTC")
     }
 
     /**
-     * Extracts distinct Image + Prompt records from Blogger HTML content.
-     * Keeps Image A + Prompt A separate from Image B + Prompt B.
-     * Filters out credits, hashtags, tutorial instructions, intro/outro text.
+     * Fetches all real posts from the Blogger feed URL.
+     * Parses all images and their associated exact AI prompts.
+     * Imports latest posts without caching stale feed responses.
      */
-    fun parseBloggerContent(
-        postId: String,
-        postTitle: String,
-        htmlContent: String,
-        defaultCategory: String,
-        sourceUrl: String
-    ): List<PromptItem> {
-        val results = mutableListOf<PromptItem>()
+    fun fetchPromptsFromFeedUrl(rawFeedUrl: String): Pair<List<PromptItem>, List<GalleryImage>> {
+        val prompts = mutableListOf<PromptItem>()
+        val gallery = mutableListOf<GalleryImage>()
 
-        // Find all image URLs in the post
-        val imgPattern = Pattern.compile("<img[^>]+src=\"([^\"]+)\"", Pattern.CASE_INSENSITIVE)
-        val imgMatcher = imgPattern.matcher(htmlContent)
+        val urlWithParams = if (rawFeedUrl.contains("alt=json")) {
+            rawFeedUrl
+        } else {
+            val separator = if (rawFeedUrl.contains("?")) "&" else "?"
+            "$rawFeedUrl${separator}alt=json&max-results=500"
+        }
+
+        try {
+            val request = Request.Builder()
+                .url(urlWithParams)
+                .cacheControl(CacheControl.Builder().noCache().build())
+                .header("User-Agent", "Mozilla/5.0 (Linux; Android 14) AiPromptXpert/1.0")
+                .header("Accept", "application/json, text/javascript, */*")
+                .build()
+
+            val response = okHttpClient.newCall(request).execute()
+            if (!response.isSuccessful) {
+                return Pair(emptyList(), emptyList())
+            }
+
+            val bodyString = response.body?.string() ?: return Pair(emptyList(), emptyList())
+            val jsonObject = JSONObject(bodyString)
+            val feedObj = jsonObject.optJSONObject("feed") ?: return Pair(emptyList(), emptyList())
+            val entriesArray = feedObj.optJSONArray("entry") ?: return Pair(emptyList(), emptyList())
+
+            val rawEntries = mutableListOf<BloggerPostEntry>()
+
+            for (i in 0 until entriesArray.length()) {
+                val entryObj = entriesArray.optJSONObject(i) ?: continue
+
+                val idObj = entryObj.optJSONObject("id")
+                val rawId = idObj?.optString("\$t") ?: "post-$i"
+                val postId = rawId.substringAfterLast("post-", "post-$i")
+
+                val titleObj = entryObj.optJSONObject("title")
+                val postTitle = titleObj?.optString("\$t")?.trim() ?: "AI Prompt"
+
+                val contentObj = entryObj.optJSONObject("content")
+                val htmlContent = contentObj?.optString("\$t") ?: ""
+
+                val publishedObj = entryObj.optJSONObject("published")
+                val publishedStr = publishedObj?.optString("\$t") ?: ""
+                val updatedObj = entryObj.optJSONObject("updated")
+                val updatedStr = updatedObj?.optString("\$t") ?: ""
+                val timestampStr = if (publishedStr.isNotBlank()) publishedStr else updatedStr
+                val publishedTimestamp = parseTimestamp(timestampStr)
+
+                // Extract Blogger labels / categories exactly as defined on Blogger
+                val categoriesList = mutableListOf<String>()
+                val catArray = entryObj.optJSONArray("category")
+                if (catArray != null) {
+                    for (c in 0 until catArray.length()) {
+                        val catObj = catArray.optJSONObject(c)
+                        val term = catObj?.optString("term")?.trim()
+                        if (!term.isNullOrBlank()) {
+                            categoriesList.add(term)
+                        }
+                    }
+                }
+
+                // Extract post alternate URL
+                var postUrl = rawFeedUrl
+                val linkArray = entryObj.optJSONArray("link")
+                if (linkArray != null) {
+                    for (l in 0 until linkArray.length()) {
+                        val lObj = linkArray.optJSONObject(l)
+                        if (lObj?.optString("rel") == "alternate") {
+                            postUrl = lObj.optString("href", rawFeedUrl)
+                            break
+                        }
+                    }
+                }
+
+                rawEntries.add(
+                    BloggerPostEntry(
+                        postId = postId,
+                        title = postTitle,
+                        htmlContent = htmlContent,
+                        publishedTimestamp = publishedTimestamp,
+                        categories = categoriesList,
+                        postUrl = postUrl
+                    )
+                )
+            }
+
+            // Process posts and extract accurate prompts and high-res images
+            for (entry in rawEntries) {
+                val (extractedPrompts, extractedGallery) = parseBloggerPost(entry)
+                prompts.addAll(extractedPrompts)
+                gallery.addAll(extractedGallery)
+            }
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        return Pair(prompts, gallery)
+    }
+
+    /**
+     * Parses a single Blogger post, extracting ONLY:
+     * 1. The main image(s) with high resolution.
+     * 2. The exact AI image prompt associated with each image.
+     *
+     * If a post contains multiple prompts, each is preserved as an individual prompt record.
+     * Never generates fake AI prompt text or sample images.
+     */
+    private fun parseBloggerPost(entry: BloggerPostEntry): Pair<List<PromptItem>, List<GalleryImage>> {
+        val prompts = mutableListOf<PromptItem>()
+        val gallery = mutableListOf<GalleryImage>()
+
+        val images = extractHighResImages(entry.htmlContent)
+        val promptTexts = extractExactPrompts(entry.htmlContent)
+
+        // If no prompt text was found and no images, do not invent anything
+        if (promptTexts.isEmpty() && images.isEmpty()) {
+            return Pair(emptyList(), emptyList())
+        }
+
+        val primaryCategory = entry.categories.firstOrNull() ?: "AI Prompts"
+        val tagsString = if (entry.categories.isNotEmpty()) {
+            entry.categories.joinToString(", ")
+        } else {
+            primaryCategory
+        }
+
+        val defaultImage = images.firstOrNull() ?: ""
+
+        // If multiple prompt texts are extracted (e.g., 2, 4, 14, 40)
+        if (promptTexts.isNotEmpty()) {
+            for (i in promptTexts.indices) {
+                val promptText = promptTexts[i]
+                val cleanedPrompt = cleanPromptText(promptText)
+                if (cleanedPrompt.length < 15) continue // Skip non-prompt artifacts
+
+                val imgUrl = if (i < images.size) images[i] else defaultImage
+                val codeNum = 100 + (entry.postId.hashCode().let { if (it < 0) -it else it } % 899 + i)
+                val promptCode = "#$codeNum"
+                val stableId = generateStableId(entry.postId, i, cleanedPrompt)
+                val itemTitle = if (promptTexts.size > 1) "${entry.title} (#${i + 1})" else entry.title
+                val platform = determinePlatform(cleanedPrompt)
+
+                val promptItem = PromptItem(
+                    id = stableId,
+                    promptCode = promptCode,
+                    title = itemTitle,
+                    category = primaryCategory,
+                    platform = platform,
+                    description = extractShortSummary(cleanedPrompt),
+                    exactPrompt = cleanedPrompt,
+                    imageUrl = imgUrl,
+                    isFeatured = i == 0,
+                    isTrending = true,
+                    tags = tagsString,
+                    createdAt = entry.publishedTimestamp + i,
+                    sourceUrl = entry.postUrl
+                )
+
+                prompts.add(promptItem)
+
+                if (imgUrl.isNotBlank()) {
+                    gallery.add(
+                        GalleryImage(
+                            id = "gallery_${stableId}",
+                            title = itemTitle,
+                            imageUrl = imgUrl,
+                            promptId = stableId,
+                            promptCode = promptCode,
+                            category = primaryCategory,
+                            exactPrompt = cleanedPrompt,
+                            tags = tagsString
+                        )
+                    )
+                }
+            }
+        } else if (images.isNotEmpty()) {
+            // Post has images but prompts couldn't be extracted in standard code blocks
+            // Try extracting from paragraph text
+            val fallbackPrompt = extractFallbackPromptFromText(entry.htmlContent)
+            if (fallbackPrompt.isNotBlank()) {
+                val cleanedPrompt = cleanPromptText(fallbackPrompt)
+                for (i in images.indices) {
+                    val imgUrl = images[i]
+                    val codeNum = 100 + (entry.postId.hashCode().let { if (it < 0) -it else it } % 899 + i)
+                    val promptCode = "#$codeNum"
+                    val stableId = generateStableId(entry.postId, i, "$cleanedPrompt-$i")
+                    val itemTitle = if (images.size > 1) "${entry.title} (Image ${i + 1})" else entry.title
+                    val platform = determinePlatform(cleanedPrompt)
+
+                    val promptItem = PromptItem(
+                        id = stableId,
+                        promptCode = promptCode,
+                        title = itemTitle,
+                        category = primaryCategory,
+                        platform = platform,
+                        description = extractShortSummary(cleanedPrompt),
+                        exactPrompt = cleanedPrompt,
+                        imageUrl = imgUrl,
+                        isFeatured = i == 0,
+                        isTrending = true,
+                        tags = tagsString,
+                        createdAt = entry.publishedTimestamp + i,
+                        sourceUrl = entry.postUrl
+                    )
+
+                    prompts.add(promptItem)
+
+                    gallery.add(
+                        GalleryImage(
+                            id = "gallery_${stableId}",
+                            title = itemTitle,
+                            imageUrl = imgUrl,
+                            promptId = stableId,
+                            promptCode = promptCode,
+                            category = primaryCategory,
+                            exactPrompt = cleanedPrompt,
+                            tags = tagsString
+                        )
+                    )
+                }
+            }
+        }
+
+        return Pair(prompts, gallery)
+    }
+
+    /**
+     * Extracts all high-resolution images from the HTML content.
+     */
+    private fun extractHighResImages(html: String): List<String> {
         val images = mutableListOf<String>()
-        while (imgMatcher.find()) {
-            val imgUrl = imgMatcher.group(1)
-            if (!imgUrl.isNullOrEmpty() && !imgUrl.contains("ads") && !imgUrl.contains("icon")) {
-                images.add(imgUrl)
+        val imgPattern = Pattern.compile("<img[^>]+src=[\"']([^\"']+)[\"']", Pattern.CASE_INSENSITIVE)
+        val matcher = imgPattern.matcher(html)
+
+        while (matcher.find()) {
+            val rawSrc = matcher.group(1) ?: continue
+            if (isValidPostImage(rawSrc)) {
+                val highResSrc = upgradeToHighRes(rawSrc)
+                if (!images.contains(highResSrc)) {
+                    images.add(highResSrc)
+                }
+            }
+        }
+        return images
+    }
+
+    /**
+     * Upgrades Blogger thumbnail URLs to full-resolution /s1600/.
+     */
+    private fun upgradeToHighRes(url: String): String {
+        return url
+            .replace(Regex("/s[0-9]+(-[a-z0-9]+)?/"), "/s1600/")
+            .replace(Regex("/w[0-9]+-h[0-9]+(-[a-z0-9]+)?/"), "/s1600/")
+    }
+
+    private fun isValidPostImage(url: String): Boolean {
+        val lower = url.lowercase()
+        return !lower.contains("ad_") &&
+                !lower.contains("banner") &&
+                !lower.contains("icon") &&
+                !lower.contains("logo") &&
+                !lower.contains("button") &&
+                !lower.contains("pixel.gif") &&
+                (lower.contains("blogger.googleusercontent.com") ||
+                        lower.contains("bp.blogspot.com") ||
+                        lower.contains(".jpg") ||
+                        lower.contains(".jpeg") ||
+                        lower.contains(".png") ||
+                        lower.contains(".webp"))
+    }
+
+    /**
+     * Extracts exact AI image prompts from HTML content.
+     * Looks for code boxes, pre blocks, blockquotes, styled divs, or "Prompt:" lines.
+     * Prevents internal duplication through normalized text tracking.
+     */
+    private fun extractExactPrompts(html: String): List<String> {
+        val prompts = mutableListOf<String>()
+        val seenNormalized = mutableSetOf<String>()
+
+        fun addIfValid(rawText: String) {
+            val cleaned = cleanPromptText(rawText)
+            val normalized = cleaned.lowercase().replace(Regex("\\s+"), " ").trim()
+            if (isLikelyPromptText(cleaned) && normalized.length >= 20 && seenNormalized.add(normalized)) {
+                prompts.add(cleaned)
             }
         }
 
-        // Find blocks enclosed in <code>, <pre>, <blockquote>, or styled prompt divs
-        val promptBlocks = mutableListOf<String>()
-        val codePattern = Pattern.compile("<(?:code|pre|blockquote)[^>]*>(.*?)</(?:code|pre|blockquote)>", Pattern.DOTALL or Pattern.CASE_INSENSITIVE)
-        val codeMatcher = codePattern.matcher(htmlContent)
-        while (codeMatcher.find()) {
-            val clean = stripHtml(codeMatcher.group(1)).trim()
-            if (isLikelyPrompt(clean)) {
-                promptBlocks.add(clean)
-            }
+        // 1. Check for standard prompt containers: <pre>, <code>, <blockquote>, <textarea>, or <div class="code-box">
+        val containerPattern = Pattern.compile(
+            "<(?:pre|code|blockquote|textarea)[^>]*>(.*?)</(?:pre|code|blockquote|textarea)>",
+            Pattern.DOTALL or Pattern.CASE_INSENSITIVE
+        )
+        val containerMatcher = containerPattern.matcher(html)
+        while (containerMatcher.find()) {
+            val rawBlock = stripHtmlTags(containerMatcher.group(1)).trim()
+            addIfValid(rawBlock)
         }
 
-        // Fallback: search for "Prompt:" or "AI Prompt:" or "Copy Prompt:" in plain text
-        if (promptBlocks.isEmpty()) {
-            val plainText = stripHtml(htmlContent)
+        // 2. Check for divs or paragraphs specifically styled with prompt classes
+        val divPattern = Pattern.compile(
+            "<div[^>]+class=[\"'][^\"']*(?:prompt|code|copy|text-box)[^\"']*[\"'][^>]*>(.*?)</div>",
+            Pattern.DOTALL or Pattern.CASE_INSENSITIVE
+        )
+        val divMatcher = divPattern.matcher(html)
+        while (divMatcher.find()) {
+            val rawBlock = stripHtmlTags(divMatcher.group(1)).trim()
+            addIfValid(rawBlock)
+        }
+
+        // 3. Fallback searching for "Prompt:", "Prompt 1:", "Prompt 2:", etc. if no container prompts found
+        if (prompts.isEmpty()) {
+            val plainText = stripHtmlTags(html)
             val lines = plainText.split("\n")
-            var currentPrompt = StringBuilder()
             var capturing = false
+            val currentPromptBuilder = StringBuilder()
 
             for (line in lines) {
                 val trimmed = line.trim()
-                if (trimmed.startsWith("Prompt:", ignoreCase = true) ||
-                    trimmed.startsWith("AI Prompt:", ignoreCase = true) ||
-                    trimmed.startsWith("Prompt Code:", ignoreCase = true)
-                ) {
-                    if (capturing && currentPrompt.isNotEmpty()) {
-                        val p = currentPrompt.toString().trim()
-                        if (isLikelyPrompt(p)) promptBlocks.add(p)
-                        currentPrompt = StringBuilder()
+                if (isPromptHeaderLine(trimmed)) {
+                    if (capturing && currentPromptBuilder.isNotEmpty()) {
+                        addIfValid(currentPromptBuilder.toString())
+                        currentPromptBuilder.clear()
                     }
                     capturing = true
-                    val contentAfterColon = trimmed.substringAfter(":").trim()
-                    if (contentAfterColon.isNotEmpty()) {
-                        currentPrompt.append(contentAfterColon)
+                    val afterColon = extractContentAfterHeader(trimmed)
+                    if (afterColon.isNotBlank()) {
+                        currentPromptBuilder.append(afterColon)
                     }
                 } else if (capturing) {
-                    if (trimmed.isEmpty() || trimmed.startsWith("How to", ignoreCase = true) || trimmed.startsWith("Subscribe", ignoreCase = true)) {
+                    if (isBoilerplateStart(trimmed)) {
                         capturing = false
-                        val p = currentPrompt.toString().trim()
-                        if (isLikelyPrompt(p)) promptBlocks.add(p)
-                        currentPrompt = StringBuilder()
-                    } else {
-                        currentPrompt.append(" ").append(trimmed)
+                        addIfValid(currentPromptBuilder.toString())
+                        currentPromptBuilder.clear()
+                    } else if (trimmed.isNotBlank()) {
+                        currentPromptBuilder.append(" ").append(trimmed)
                     }
                 }
             }
-            if (capturing && currentPrompt.isNotEmpty()) {
-                val p = currentPrompt.toString().trim()
-                if (isLikelyPrompt(p)) promptBlocks.add(p)
+
+            if (capturing && currentPromptBuilder.isNotEmpty()) {
+                addIfValid(currentPromptBuilder.toString())
             }
         }
 
-        // Pair images with prompts or fallback to title if needed
-        val count = maxOf(1, maxOf(images.size, promptBlocks.size))
-        val fallbackImage = images.firstOrNull() ?: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=800&auto=format&fit=crop"
-        val fallbackPrompt = if (promptBlocks.isNotEmpty()) promptBlocks.first() else "Create a 3D cinematic high detail portrait inspired by $postTitle by AiMAEditz."
+        return prompts
+    }
 
-        for (i in 0 until count) {
-            val img = if (i < images.size) images[i] else fallbackImage
-            val pText = if (i < promptBlocks.size) promptBlocks[i] else fallbackPrompt
-            val cleanPrompt = cleanPromptText(pText)
-
-            val codeNum = 100 + (postId.hashCode() % 800 + i).let { if (it < 0) -it else it }
-            val promptCode = "#$codeNum"
-            val stableId = generateStableId(postId, i, cleanPrompt)
-
-            results.add(
-                PromptItem(
-                    id = stableId,
-                    promptCode = promptCode,
-                    title = if (count == 1) postTitle else "$postTitle (Concept ${i + 1})",
-                    category = defaultCategory,
-                    platform = determinePlatform(cleanPrompt),
-                    description = extractShortDescription(cleanPrompt),
-                    exactPrompt = cleanPrompt,
-                    imageUrl = img,
-                    isFeatured = i == 0,
-                    isTrending = true,
-                    tags = extractTags(postTitle, defaultCategory),
-                    sourceUrl = sourceUrl
-                )
-            )
+    private fun extractFallbackPromptFromText(html: String): String {
+        val plainText = stripHtmlTags(html)
+        val lines = plainText.split("\n")
+        for (line in lines) {
+            val trimmed = line.trim()
+            if (trimmed.length >= 35 && isLikelyPromptText(trimmed)) {
+                return trimmed
+            }
         }
+        return ""
+    }
 
-        return results
+    private fun isPromptHeaderLine(line: String): Boolean {
+        val lower = line.lowercase()
+        return lower.startsWith("prompt") ||
+                lower.startsWith("ai prompt") ||
+                lower.startsWith("bing prompt") ||
+                lower.startsWith("gemini prompt") ||
+                lower.startsWith("midjourney prompt") ||
+                lower.startsWith("copy prompt") ||
+                lower.startsWith("prompt 1") ||
+                lower.startsWith("prompt 2") ||
+                lower.startsWith("prompt 3") ||
+                lower.startsWith("prompt 4")
+    }
+
+    private fun extractContentAfterHeader(line: String): String {
+        val colonIdx = line.indexOf(':')
+        if (colonIdx != -1 && colonIdx < line.length - 1) {
+            return line.substring(colonIdx + 1).trim()
+        }
+        val dashIdx = line.indexOf('-')
+        if (dashIdx != -1 && dashIdx < line.length - 1) {
+            return line.substring(dashIdx + 1).trim()
+        }
+        return ""
+    }
+
+    private fun isBoilerplateStart(line: String): Boolean {
+        val lower = line.lowercase()
+        return lower.startsWith("how to") ||
+                lower.startsWith("steps to") ||
+                lower.startsWith("follow us") ||
+                lower.startsWith("subscribe") ||
+                lower.startsWith("join our") ||
+                lower.startsWith("credit:") ||
+                lower.startsWith("author:") ||
+                lower.startsWith("related posts") ||
+                lower.startsWith("share this") ||
+                lower.startsWith("disclaimer") ||
+                lower.startsWith("tags:")
+    }
+
+    private fun isLikelyPromptText(text: String): Boolean {
+        val lower = text.lowercase()
+        if (lower.startsWith("how to create") ||
+            lower.startsWith("step 1") ||
+            lower.startsWith("in this tutorial") ||
+            lower.startsWith("welcome to") ||
+            lower.startsWith("hello friends") ||
+            lower.startsWith("download now")
+        ) {
+            return false
+        }
+        return lower.contains("photo") ||
+                lower.contains("image") ||
+                lower.contains("portrait") ||
+                lower.contains("cinematic") ||
+                lower.contains("render") ||
+                lower.contains("realistic") ||
+                lower.contains("boy") ||
+                lower.contains("girl") ||
+                lower.contains("man") ||
+                lower.contains("woman") ||
+                lower.contains("wearing") ||
+                lower.contains("lighting") ||
+                lower.contains("background") ||
+                lower.contains("4k") ||
+                lower.contains("8k") ||
+                lower.contains("3d") ||
+                lower.contains("camera") ||
+                lower.contains("sitting") ||
+                lower.contains("standing") ||
+                lower.contains("avatar") ||
+                lower.contains("hyper-realistic")
     }
 
     private fun cleanPromptText(raw: String): String {
-        return raw.replace(Regex("(?i)^(Prompt:|AI Prompt:|Prompt Code:|Copy Prompt:)\\s*"), "")
-            .replace(Regex("(?i)#\\w+"), "") // strip hashtags
-            .replace(Regex("(?i)Follow @\\w+ for more"), "")
-            .replace(Regex("(?i)Created by M(R)?\\.? ABID / AiMAEditz"), "")
-            .trim()
-    }
+        var text = stripHtmlTags(raw)
+        text = text.replace("&nbsp;", " ")
+            .replace("&amp;", "&")
+            .replace("&quot;", "\"")
+            .replace("&#39;", "'")
+            .replace("&lt;", "<")
+            .replace("&gt;", ">")
 
-    private fun isLikelyPrompt(text: String): Boolean {
-        val clean = cleanPromptText(text)
-        return clean.length > 20 && !clean.startsWith("How to", ignoreCase = true)
-    }
+        // Remove leading "Prompt:", "Prompt 1:", etc.
+        val headerRegex = Regex("^(?:AI\\s+)?Prompt(?:\\s+\\d+)?[\\s:-]+", RegexOption.IGNORE_CASE)
+        text = text.replace(headerRegex, "").trim()
 
-    private fun determineCategoryFromTitle(title: String): String {
-        val lower = title.lowercase()
-        return when {
-            lower.contains("boy") -> "Boy Prompts"
-            lower.contains("girl") -> "Girl Prompts"
-            lower.contains("couple") -> "Couple Prompts"
-            lower.contains("islamic") || lower.contains("ramadan") || lower.contains("mosque") -> "Islamic Prompts"
-            lower.contains("eid") -> "Eid Prompts"
-            lower.contains("wedding") -> "Wedding Prompts"
-            lower.contains("cinematic") -> "Cinematic Prompts"
-            lower.contains("car") -> "Cars"
-            lower.contains("gemini") -> "Gemini"
-            else -> "AI Editing"
+        // Remove surrounding quotes if present
+        if (text.startsWith("\"") && text.endsWith("\"") && text.length > 2) {
+            text = text.substring(1, text.length - 1).trim()
         }
+        return text
+    }
+
+    private fun stripHtmlTags(html: String): String {
+        return html.replace(Regex("<br\\s*/?>", RegexOption.IGNORE_CASE), "\n")
+            .replace(Regex("<p[^>]*>", RegexOption.IGNORE_CASE), "\n")
+            .replace(Regex("<[^>]+>"), "")
+            .trim()
     }
 
     private fun determinePlatform(prompt: String): String {
         val lower = prompt.lowercase()
         return when {
-            lower.contains("midjourney") -> "Midjourney"
-            lower.contains("dall-e") || lower.contains("bing") -> "Bing AI"
-            lower.contains("gemini") -> "Gemini"
-            lower.contains("chatgpt") -> "ChatGPT"
-            else -> "Gemini / Bing"
+            lower.contains("bing") || lower.contains("copilot") || lower.contains("dall-e") -> "Bing AI"
+            lower.contains("gemini") || lower.contains("google ai") -> "Gemini"
+            lower.contains("midjourney") || lower.contains("--v ") || lower.contains("--ar ") -> "Midjourney"
+            lower.contains("chatgpt") || lower.contains("gpt-4") -> "ChatGPT"
+            lower.contains("leonardo") -> "Leonardo.Ai"
+            else -> "Bing / DALL-E 3"
         }
     }
 
-    private fun extractShortDescription(prompt: String): String {
-        return if (prompt.length > 120) prompt.substring(0, 120) + "..." else prompt
+    private fun extractShortSummary(prompt: String): String {
+        val firstSentence = prompt.split(Regex("[.!?\n]")).firstOrNull()?.trim() ?: prompt
+        return if (firstSentence.length > 110) {
+            firstSentence.substring(0, 107) + "..."
+        } else {
+            firstSentence
+        }
     }
 
-    private fun extractTags(title: String, category: String): String {
-        return "$category, AiMAEditz, AiPromptXpert, 3D, Portrait"
-    }
-
-    private fun stripHtml(html: String): String {
-        return html.replace(Regex("<[^>]*>"), " ").replace("&nbsp;", " ").replace("&amp;", "&").trim()
+    private fun parseTimestamp(dateStr: String): Long {
+        if (dateStr.isBlank()) return System.currentTimeMillis()
+        return try {
+            val clean = dateStr.trim()
+            val isoClean = if (clean.length >= 19) clean.substring(0, 19).replace("T", " ") else clean
+            SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).apply {
+                timeZone = TimeZone.getTimeZone("UTC")
+            }.parse(isoClean)?.time ?: System.currentTimeMillis()
+        } catch (_: Exception) {
+            System.currentTimeMillis()
+        }
     }
 
     private fun generateStableId(postId: String, index: Int, promptText: String): String {
@@ -200,3 +531,12 @@ class BloggerDataSource(private val apiService: BloggerApiService) {
         return digest.joinToString("") { "%02x".format(it) }
     }
 }
+
+data class BloggerPostEntry(
+    val postId: String,
+    val title: String,
+    val htmlContent: String,
+    val publishedTimestamp: Long,
+    val categories: List<String>,
+    val postUrl: String
+)

@@ -1,6 +1,7 @@
 package com.example.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -24,6 +25,7 @@ fun AppTopBar(
     onSearchClick: () -> Unit,
     onThemeToggleClick: () -> Unit,
     onProfileClick: () -> Unit,
+    onLogoClick: () -> Unit = {},
     isDarkTheme: Boolean
 ) {
     Surface(
@@ -38,10 +40,14 @@ fun AppTopBar(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Compact Brand Logo + Title + PRO Badge
+            // Compact Brand Logo + Title + PRO Badge (Tappable for fast refresh)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable { onLogoClick() }
+                    .padding(vertical = 4.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.AutoAwesome,

@@ -61,4 +61,10 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    override fun onResume() {
+        super.onResume()
+        // Automatically check for newly published Blogger posts when resuming
+        mainViewModel.refreshContent(showToast = false)
+    }
 }

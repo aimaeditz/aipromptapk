@@ -43,6 +43,7 @@ fun AppNavigation(
                         viewModel.setThemeMode(nextTheme)
                     },
                     onProfileClick = { navController.navigate(Screen.Profile.route) },
+                    onLogoClick = { viewModel.refreshContent(showToast = true) },
                     isDarkTheme = currentThemeMode == AppThemeMode.DARK
                 )
             }

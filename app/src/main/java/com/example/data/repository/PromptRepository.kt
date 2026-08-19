@@ -1,30 +1,43 @@
-package com.example.data.local
+package com.example.data.repository
 
-import com.example.data.remote.BloggerApiService
-import com.example.data.remote.BloggerDataSource
+import com.example.data.local.FavoriteDao
+import com.example.data.local.FavoriteEntity
+import com.example.data.local.InitialSeedData
+import com.example.data.local.PromptDao
 import com.example.data.model.GalleryImage
 import com.example.data.model.PromptItem
+import com.example.data.remote.BloggerDataSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
 
 class PromptRepository(
     private val promptDao: PromptDao,
     private val favoriteDao: FavoriteDao,
-    private val bloggerApiService: BloggerApiService? = null
+    private val okHttpClient: OkHttpClient
 ) {
     val allPrompts: Flow<List<PromptItem>> = promptDao.getAllPrompts()
     val featuredPrompts: Flow<List<PromptItem>> = promptDao.getFeaturedPrompts()
     val trendingPrompts: Flow<List<PromptItem>> = promptDao.getTrendingPrompts()
     val allGalleryImages: Flow<List<GalleryImage>> = promptDao.getAllGalleryImages()
     val allFavorites: Flow<List<FavoriteEntity>> = favoriteDao.getAllFavorites()
+    val distinctCategories: Flow<List<String>> = promptDao.getDistinctCategories()
+
+    private val bloggerDataSource = BloggerDataSource(okHttpClient)
 
     suspend fun initializeSeedData() = withContext(Dispatchers.IO) {
-        val existingPrompts = promptDao.getAllPrompts().first()
-        if (existingPrompts.isEmpty()) {
-            promptDao.insertPrompts(InitialSeedData.PROMPTS)
-            promptDao.insertGalleryImages(InitialSeedData.GALLERY_IMAGES)
+        // 1. Purge any legacy sample data, mock data, and remove the other Blogger source completely
+        promptDao.purgeFakeMockPrompts()
+        promptDao.purgeFakeMockGallery()
+        promptDao.purgeAimaeditzPrompts()
+        promptDao.purgeAimaeditzGallery()
+        promptDao.purgeDuplicatePromptsByText()
+
+        // 2. Initialize tools and tutorials if not yet present
+        val existingTools = promptDao.getAllTools().first()
+        if (existingTools.isEmpty()) {
             promptDao.insertTools(InitialSeedData.TOOLS)
             promptDao.insertTutorials(InitialSeedData.TUTORIALS)
         }
@@ -72,36 +85,66 @@ class PromptRepository(
     }
 
     /**
-     * High-speed, non-blocking silent Blogger delta sync.
-     * Compares remote items against local cache and writes only new/updated entries.
+     * Automatic silent background sync from Blogger:
+     * SOLE SOURCE OF TRUTH: https://aipromptxpert.blogspot.com/feeds/posts/default
+     *
+     * Imports all real prompts from oldest to newest.
+     * Prevents duplicate prompts by enforcing unique exact prompt text and ID.
      */
     suspend fun syncBloggerFeeds(): Int = withContext(Dispatchers.IO) {
-        if (bloggerApiService == null) return@withContext 0
-        val dataSource = BloggerDataSource(bloggerApiService)
+        val singleFeedUrl = "https://aipromptxpert.blogspot.com/feeds/posts/default"
 
-        val feedUrls = listOf(
-            "https://aimaeditz.blogspot.com/feeds/posts/default?alt=json",
-            "https://aipromptxpert.blogspot.com/feeds/posts/default?alt=json"
-        )
-
-        var totalSynced = 0
+        var totalImported = 0
         val currentPrompts = promptDao.getAllPrompts().first()
-        val currentPromptMap = currentPrompts.associateBy { it.id }
+        val currentMap = currentPrompts.associateBy { it.id }
+        val currentPromptTexts = currentPrompts.map { it.exactPrompt.trim().lowercase() }.toMutableSet()
 
-        for (url in feedUrls) {
-            val remotePrompts = dataSource.fetchPromptsFromUrl(url)
-            if (remotePrompts.isNotEmpty()) {
-                val newOrUpdated = remotePrompts.filter { remote ->
-                    val existing = currentPromptMap[remote.id]
-                    existing == null || existing.exactPrompt != remote.exactPrompt || existing.imageUrl != remote.imageUrl
-                }
+        val allFetchedPrompts = mutableListOf<PromptItem>()
+        val allFetchedGallery = mutableListOf<GalleryImage>()
 
-                if (newOrUpdated.isNotEmpty()) {
-                    promptDao.insertPrompts(newOrUpdated)
-                    totalSynced += newOrUpdated.size
+        try {
+            val (prompts, gallery) = bloggerDataSource.fetchPromptsFromFeedUrl(singleFeedUrl)
+            
+            // Deduplicate fetched prompts in-memory so each prompt is unique
+            val seenInBatch = mutableSetOf<String>()
+            for (p in prompts) {
+                val normalizedText = p.exactPrompt.trim().lowercase()
+                if (normalizedText.isNotBlank() && seenInBatch.add(normalizedText)) {
+                    allFetchedPrompts.add(p)
                 }
             }
+
+            val seenGalleryUrls = mutableSetOf<String>()
+            for (g in gallery) {
+                if (g.imageUrl.isNotBlank() && seenGalleryUrls.add(g.imageUrl)) {
+                    allFetchedGallery.add(g)
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
-        return@withContext totalSynced
+
+        if (allFetchedPrompts.isNotEmpty()) {
+            // Filter only genuinely new or updated prompts to prevent unnecessary DB writes
+            val newOrUpdatedPrompts = allFetchedPrompts.filter { fetched ->
+                val existing = currentMap[fetched.id]
+                val normalized = fetched.exactPrompt.trim().lowercase()
+                existing == null || existing.exactPrompt != fetched.exactPrompt || existing.imageUrl != fetched.imageUrl
+            }
+
+            if (newOrUpdatedPrompts.isNotEmpty()) {
+                promptDao.insertPrompts(newOrUpdatedPrompts)
+                totalImported += newOrUpdatedPrompts.size
+            }
+
+            if (allFetchedGallery.isNotEmpty()) {
+                promptDao.insertGalleryImages(allFetchedGallery)
+            }
+
+            // Cleanup any duplicate entries if they ever existed
+            promptDao.purgeDuplicatePromptsByText()
+        }
+
+        return@withContext totalImported
     }
 }

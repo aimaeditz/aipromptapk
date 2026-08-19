@@ -13,51 +13,43 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.local.AppDatabase
 import com.example.data.local.FavoriteEntity
-import com.example.data.local.PromptRepository
 import com.example.data.model.*
 import com.example.data.repository.AdMobConfigRepository
+import com.example.data.repository.PromptRepository
+import com.example.data.repository.RemoteConfigRepository
 import com.example.data.repository.ToolRepository
 import com.example.data.repository.TutorialRepository
 import com.example.ui.theme.AppThemeMode
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import java.util.UUID
-
-import com.example.data.remote.BloggerApiService
-import com.squareup.moshi.Moshi
-import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import okhttp3.OkHttpClient
-import retrofit2.Retrofit
-import retrofit2.converter.moshi.MoshiConverterFactory
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val bloggerApiService: BloggerApiService by lazy {
-        val moshi = Moshi.Builder()
-            .add(KotlinJsonAdapterFactory())
+    private val okHttpClient: OkHttpClient by lazy {
+        OkHttpClient.Builder()
+            .connectTimeout(12, TimeUnit.SECONDS)
+            .readTimeout(15, TimeUnit.SECONDS)
+            .followRedirects(true)
+            .followSslRedirects(true)
             .build()
-
-        val okHttpClient = OkHttpClient.Builder()
-            .connectTimeout(8, TimeUnit.SECONDS)
-            .readTimeout(10, TimeUnit.SECONDS)
-            .build()
-
-        Retrofit.Builder()
-            .baseUrl("https://aipromptxpert.blogspot.com/")
-            .client(okHttpClient)
-            .addConverterFactory(MoshiConverterFactory.create(moshi))
-            .build()
-            .create(BloggerApiService::class.java)
     }
 
     private val db = AppDatabase.getDatabase(application)
     private val promptRepository by lazy {
-        PromptRepository(db.promptDao(), db.favoriteDao(), bloggerApiService)
+        PromptRepository(db.promptDao(), db.favoriteDao(), okHttpClient)
     }
     private val toolRepository = ToolRepository(db.promptDao(), db.favoriteDao())
     private val tutorialRepository = TutorialRepository(db.promptDao())
     val adMobConfigRepository = AdMobConfigRepository()
+    private val remoteConfigRepository = RemoteConfigRepository(application, viewModelScope)
+
+    // Remote Configuration State Flow (Safe, validated, local-first with background updates)
+    val remoteConfig: StateFlow<AppRemoteConfig> = remoteConfigRepository.config
 
     // Offline / Network Connectivity State
     private val _isOffline = MutableStateFlow(false)
@@ -112,6 +104,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val favorites: StateFlow<List<FavoriteEntity>> = promptRepository.allFavorites
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
+    val distinctCategories: StateFlow<List<String>> = promptRepository.distinctCategories
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    // Pull-to-refresh / manual refresh state
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
     // Sync Status Text
     private val _syncMessage = MutableStateFlow<String?>(null)
     val syncMessage: StateFlow<String?> = _syncMessage.asStateFlow()
@@ -120,20 +119,63 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         monitorNetworkConnectivity()
 
         viewModelScope.launch {
-            // Immediately initialize local seed data so UI never blocks
+            // 1. Initialize local cache and purge any legacy fake mock data
             promptRepository.initializeSeedData()
 
-            // Silent non-blocking background sync with Blogger feeds
+            // 2. Perform initial silent background Blogger synchronization
+            syncBloggerContentSilently()
+
+            // 3. Periodic background sync loop (every 3 minutes) for future Blogger posts
+            while (isActive) {
+                delay(180_000L) // 3 minutes
+                if (isInternetAvailable()) {
+                    try {
+                        promptRepository.syncBloggerFeeds()
+                    } catch (_: Exception) {}
+                }
+            }
+        }
+    }
+
+    fun refreshContent(showToast: Boolean = false) {
+        if (_isRefreshing.value) return
+        viewModelScope.launch {
+            _isRefreshing.value = true
             try {
                 if (isInternetAvailable()) {
-                    promptRepository.syncBloggerFeeds()
+                    remoteConfigRepository.fetchAndActivate()
+                    val count = promptRepository.syncBloggerFeeds()
+                    if (showToast) {
+                        if (count > 0) {
+                            Toast.makeText(getApplication(), "Synced $count new prompts ✓", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(getApplication(), "Content is up to date ✓", Toast.LENGTH_SHORT).show()
+                        }
+                    }
                 } else {
                     _isOffline.value = true
+                    if (showToast) {
+                        Toast.makeText(getApplication(), "Offline — Showing cached prompts", Toast.LENGTH_SHORT).show()
+                    }
                 }
             } catch (e: Exception) {
-                // Silently ignore background sync network errors — local cache is already serving UI
+                e.printStackTrace()
+            } finally {
+                delay(300L) // smooth refresh animation completion
+                _isRefreshing.value = false
+            }
+        }
+    }
+
+    private suspend fun syncBloggerContentSilently() {
+        try {
+            if (isInternetAvailable()) {
+                promptRepository.syncBloggerFeeds()
+            } else {
                 _isOffline.value = true
             }
+        } catch (_: Exception) {
+            _isOffline.value = true
         }
     }
 
@@ -155,6 +197,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         _isOffline.value = false
                         viewModelScope.launch {
                             try {
+                                remoteConfigRepository.fetchAndActivate()
                                 promptRepository.syncBloggerFeeds()
                             } catch (_: Exception) {}
                         }
@@ -273,13 +316,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun syncBloggerContent() {
         viewModelScope.launch {
-            _syncMessage.value = "Synchronizing Blogger content..."
+            _syncMessage.value = "Synchronizing Blogger feeds..."
             val count = promptRepository.syncBloggerFeeds()
             if (count > 0) {
-                _syncMessage.value = "Successfully synced $count prompts from Blogger!"
+                _syncMessage.value = "Successfully synced $count new prompts from Blogger!"
                 Toast.makeText(getApplication(), "Synced $count prompts from Blogger", Toast.LENGTH_SHORT).show()
             } else {
-                _syncMessage.value = "Up to date! Clean sync complete."
+                _syncMessage.value = "All content up to date!"
                 Toast.makeText(getApplication(), "All content up to date", Toast.LENGTH_SHORT).show()
             }
         }

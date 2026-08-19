@@ -4,6 +4,8 @@ import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -42,7 +44,14 @@ fun ImageGalleryScreen(
     val selectedImage by viewModel.selectedGalleryImage.collectAsState()
 
     var selectedCategory by remember { mutableStateOf("All") }
-    val categories = listOf("All", "Boy Prompts", "Girl Prompts", "Couple Prompts", "Islamic Prompts", "Luxury Prompts")
+    val categories = remember(galleryImages) {
+        val distinct = galleryImages
+            .map { it.category.trim() }
+            .filter { it.isNotBlank() && it != "All" }
+            .distinct()
+            .sorted()
+        listOf("All") + distinct
+    }
 
     val filteredImages = remember(galleryImages, selectedCategory) {
         if (selectedCategory == "All") galleryImages
@@ -71,11 +80,11 @@ fun ImageGalleryScreen(
         Spacer(modifier = Modifier.height(12.dp))
 
         // Category Filter Chips
-        Row(
+        androidx.compose.foundation.lazy.LazyRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
-            categories.forEach { cat ->
+            items(categories, key = { it }) { cat ->
                 FilterChip(
                     selected = selectedCategory == cat,
                     onClick = { selectedCategory = cat },
