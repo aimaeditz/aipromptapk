@@ -1,5 +1,6 @@
 package com.example.ui.components
 
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -9,10 +10,12 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -26,8 +29,20 @@ fun AppTopBar(
     onThemeToggleClick: () -> Unit,
     onProfileClick: () -> Unit,
     onLogoClick: () -> Unit = {},
-    isDarkTheme: Boolean
+    isDarkTheme: Boolean,
+    isRefreshing: Boolean = false
 ) {
+    val infiniteTransition = rememberInfiniteTransition(label = "logo_spin")
+    val spinAngle by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 900, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "spin_angle"
+    )
+
     Surface(
         color = MaterialTheme.colorScheme.background,
         tonalElevation = 1.dp
@@ -53,7 +68,13 @@ fun AppTopBar(
                     imageVector = Icons.Default.AutoAwesome,
                     contentDescription = "AiPromptXpert Logo",
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier
+                        .size(20.dp)
+                        .graphicsLayer {
+                            if (isRefreshing) {
+                                rotationZ = spinAngle
+                            }
+                        }
                 )
 
                 Text(

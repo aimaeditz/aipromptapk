@@ -28,6 +28,7 @@ fun AppNavigation(
 
     val currentThemeMode by viewModel.themeMode.collectAsState()
     val selectedPrompt by viewModel.selectedPrompt.collectAsState()
+    val isRefreshing by viewModel.isRefreshing.collectAsState()
 
     Scaffold(
         topBar = {
@@ -44,7 +45,8 @@ fun AppNavigation(
                     },
                     onProfileClick = { navController.navigate(Screen.Profile.route) },
                     onLogoClick = { viewModel.refreshContent(showToast = true) },
-                    isDarkTheme = currentThemeMode == AppThemeMode.DARK
+                    isDarkTheme = currentThemeMode == AppThemeMode.DARK,
+                    isRefreshing = isRefreshing
                 )
             }
         },
