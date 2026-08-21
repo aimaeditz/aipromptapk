@@ -3,23 +3,19 @@ package com.example.ui.components
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.outlined.FavoriteBorder
-import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -45,138 +41,82 @@ fun PromptCard(
 
     LaunchedEffect(isCopied) {
         if (isCopied) {
-            delay(1400)
+            delay(1200)
             isCopied = false
         }
+    }
+
+    val displayTitle = remember(prompt.title) {
+        sanitizeDisplayString(prompt.title)
+    }
+
+    val displayPreview = remember(prompt.exactPrompt) {
+        sanitizeDisplayString(prompt.exactPrompt)
     }
 
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(10.dp))
             .clickable { onPromptClick() },
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp)
     ) {
         Column {
-            // Image with Badges (Compact & clean)
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(130.dp)
-            ) {
+            // Clean Compact Image (No bulky overlays or technical badges)
+            if (prompt.imageUrl.isNotBlank()) {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
                         .data(prompt.imageUrl)
-                        .crossfade(120)
+                        .crossfade(100)
                         .memoryCachePolicy(CachePolicy.ENABLED)
                         .diskCachePolicy(CachePolicy.ENABLED)
                         .build(),
-                    contentDescription = prompt.title,
+                    contentDescription = displayTitle,
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-
-                // Top Prompt Code Badge
-                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(6.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Surface(
-                        shape = RoundedCornerShape(4.dp),
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    ) {
-                        Text(
-                            text = prompt.promptCode,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-
-                    Surface(
-                        shape = RoundedCornerShape(4.dp),
-                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
-                    ) {
-                        Text(
-                            text = prompt.platform,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                }
-
-                // Favorite Button Overlay
-                IconButton(
-                    onClick = onFavoriteClick,
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(5.dp)
-                        .size(28.dp)
-                        .background(
-                            MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-                            shape = RoundedCornerShape(14.dp)
-                        )
-                ) {
-                    Icon(
-                        imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                        contentDescription = "Favorite",
-                        modifier = Modifier.size(15.dp),
-                        tint = if (isFavorite) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
-                    )
-                }
+                        .height(115.dp)
+                )
             }
 
-            // Content Details
-            Column(modifier = Modifier.padding(9.dp)) {
-                // Category Chip
+            // Compact Content Area
+            Column(
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                // Prompt Title
                 Text(
-                    text = prompt.category.uppercase(),
-                    fontSize = 9.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.secondary,
-                    letterSpacing = 0.4.sp
-                )
-
-                Spacer(modifier = Modifier.height(2.dp))
-
-                Text(
-                    text = prompt.title,
+                    text = displayTitle,
                     fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
 
-                Spacer(modifier = Modifier.height(2.dp))
-
+                // Short Prompt Preview
                 Text(
-                    text = prompt.exactPrompt,
-                    fontSize = 10.5.sp,
+                    text = displayPreview,
+                    fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
-                    lineHeight = 14.sp
+                    lineHeight = 14.5.sp
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(2.dp))
 
-                // Action Buttons with Instant Copy Feedback Animation
+                // Action Bar: Copy | Save
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // Copy Button
                     Button(
                         onClick = {
                             isCopied = true
@@ -184,19 +124,19 @@ fun PromptCard(
                         },
                         modifier = Modifier
                             .weight(1f)
-                            .height(32.dp),
+                            .height(30.dp),
                         shape = RoundedCornerShape(6.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = if (isCopied) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary
                         ),
-                        contentPadding = PaddingValues(horizontal = 6.dp)
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
                     ) {
                         AnimatedContent(
                             targetState = isCopied,
                             transitionSpec = {
-                                fadeIn(animationSpec = tween(100)) togetherWith fadeOut(animationSpec = tween(80))
+                                fadeIn(animationSpec = tween(90)) togetherWith fadeOut(animationSpec = tween(70))
                             },
-                            label = "copyAnimation"
+                            label = "copyAnim"
                         ) { copied ->
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -209,7 +149,7 @@ fun PromptCard(
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = if (copied) "Copied ✓" else "Copy Prompt",
+                                    text = if (copied) "Copied ✓" else "Copy",
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -217,17 +157,38 @@ fun PromptCard(
                         }
                     }
 
+                    // Save Button
                     OutlinedButton(
-                        onClick = onPromptClick,
+                        onClick = onFavoriteClick,
+                        modifier = Modifier.height(30.dp),
                         shape = RoundedCornerShape(6.dp),
-                        modifier = Modifier.size(32.dp),
-                        contentPadding = PaddingValues(0.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Visibility,
-                            contentDescription = "View",
-                            modifier = Modifier.size(15.dp)
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                        border = BorderStroke(
+                            1.dp,
+                            if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
+                        ),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = if (isFavorite) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surface
                         )
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = if (isFavorite) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
+                                contentDescription = if (isFavorite) "Saved" else "Save",
+                                modifier = Modifier.size(13.dp),
+                                tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = if (isFavorite) "Saved" else "Save",
+                                fontSize = 11.sp,
+                                fontWeight = if (isFavorite) FontWeight.Bold else FontWeight.Medium,
+                                color = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
                     }
                 }
             }
@@ -235,3 +196,17 @@ fun PromptCard(
     }
 }
 
+/**
+ * Sanitizes any raw technical artifacts, backslashes, escape sequences, or random letters
+ */
+fun sanitizeDisplayString(raw: String): String {
+    return raw
+        .replace(Regex("""\\[a-zA-Z0-9_]+"""), " ")
+        .replace("\\", "")
+        .replace(Regex("""(?i)^begin\b"""), "")
+        .replace(Regex("""(?i)\bbegin\b"""), "")
+        .replace(Regex("""\b[BE3]\b"""), "")
+        .replace(Regex("""#\d+"""), "")
+        .replace(Regex("""\s+"""), " ")
+        .trim()
+}

@@ -1,7 +1,5 @@
 package com.example.ui.screens
 
-import android.content.Intent
-import android.net.Uri
 import androidx.compose.animation.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
@@ -15,27 +13,19 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.OpenInNew
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
-import com.example.data.model.AiTool
 import com.example.data.model.PromptItem
 import com.example.ui.components.PromptCard
 import com.example.ui.components.SearchBarInput
 import com.example.ui.viewmodel.MainViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen(
     viewModel: MainViewModel,
@@ -43,23 +33,22 @@ fun SearchScreen(
     onSelectPrompt: (PromptItem) -> Unit,
     onSelectCategory: ((String) -> Unit)? = null
 ) {
-    val context = LocalContext.current
     val searchQuery by viewModel.searchQuery.collectAsState()
     val searchResults by viewModel.unifiedSearchResults.collectAsState()
     val favorites by viewModel.favorites.collectAsState()
 
-    val favIds = favorites.map { it.itemId }.toSet()
+    val favIds = remember(favorites) { favorites.map { it.itemId }.toSet() }
 
     val quickTags = remember {
         listOf(
-            "Boy Kurta",
             "Girl Portrait",
+            "Boy Kurta",
             "3D Avatar",
             "Islamic Mosque",
             "Luxury Car",
             "Cinematic 8K",
             "Couple Wedding",
-            "Gemini AI"
+            "YouTube Thumbnail"
         )
     }
 
@@ -84,39 +73,11 @@ fun SearchScreen(
             }
 
             Text(
-                text = "SEARCH",
+                text = "Search Prompts",
                 fontSize = 17.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
             )
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            if (searchResults.isAiInterpreted) {
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.AutoAwesome,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.secondary,
-                            modifier = Modifier.size(12.dp)
-                        )
-                        Text(
-                            text = "AI Intent",
-                            fontSize = 10.5.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.secondary
-                        )
-                    }
-                }
-            }
         }
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -126,7 +87,7 @@ fun SearchScreen(
             query = searchQuery,
             onQueryChange = { viewModel.setSearchQuery(it) },
             onSearchExecute = {},
-            placeholderText = "Search prompts, tools, categories, keywords..."
+            placeholderText = "Search prompts, images, ideas..."
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -148,7 +109,7 @@ fun SearchScreen(
                             MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
                         }
                     ),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
                 )
             }
         }
@@ -166,27 +127,27 @@ fun SearchScreen(
                     modifier = Modifier.padding(24.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Search,
+                        imageVector = Icons.Outlined.Search,
                         contentDescription = null,
-                        modifier = Modifier.size(48.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        modifier = Modifier.size(44.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                     )
                     Spacer(modifier = Modifier.height(10.dp))
                     Text(
-                        text = "Universal AI Search",
+                        text = "Search Prompt Library",
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Search across Prompts, Categories, AI Tools, and Keywords",
+                        text = "Type any topic e.g. \"girl\", \"boy kurta\", \"luxury car\", \"cinematic\"",
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
-        } else if (searchResults.totalCount == 0) {
+        } else if (searchResults.topPrompts.isEmpty() && searchResults.matchingCategories.isEmpty()) {
             // Empty Search with Smart Suggestions
             Box(
                 modifier = Modifier
@@ -199,14 +160,14 @@ fun SearchScreen(
                     modifier = Modifier.padding(20.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.SearchOff,
+                        imageVector = Icons.Outlined.SearchOff,
                         contentDescription = null,
-                        modifier = Modifier.size(44.dp),
+                        modifier = Modifier.size(40.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "No exact matches for \"$searchQuery\"",
+                        text = "No matches for \"$searchQuery\"",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -214,7 +175,7 @@ fun SearchScreen(
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "Try these popular prompt topics:",
-                        fontSize = 11.5.sp,
+                        fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(12.dp))
@@ -234,156 +195,59 @@ fun SearchScreen(
                 }
             }
         } else {
-            // Structured Multi-Type Search Results Grid
-            LazyVerticalGrid(
-                columns = GridCells.Adaptive(minSize = 160.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(bottom = 20.dp)
-            ) {
-                // Header Count & Intent Summary
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "${searchResults.topPrompts.size} Prompts • ${searchResults.matchingCategories.size} Categories",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-
-                        if (searchResults.intent?.subject != null) {
-                            Text(
-                                text = "Subject: ${searchResults.intent?.subject}",
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.secondary,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                    }
+            // Clean Search Results Grid
+            BoxWithConstraints(modifier = Modifier.weight(1f)) {
+                val columnCount = when {
+                    maxWidth >= 950.dp -> 3
+                    maxWidth >= 600.dp -> 2
+                    else -> 1
                 }
 
-                // Matching Categories Section (if any)
-                if (searchResults.matchingCategories.isNotEmpty()) {
-                    item(span = { GridItemSpan(maxLineSpan) }) {
-                        Column(modifier = Modifier.padding(vertical = 4.dp)) {
-                            Text(
-                                text = "MATCHING CATEGORIES",
-                                fontSize = 10.5.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.secondary,
-                                letterSpacing = 0.5.sp
-                            )
-                            Spacer(modifier = Modifier.height(6.dp))
-                            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                items(searchResults.matchingCategories) { cat ->
-                                    SuggestionChip(
-                                        onClick = {
-                                            viewModel.setCategory(cat)
-                                            onSelectCategory?.invoke(cat)
-                                        },
-                                        label = { Text(text = cat, fontSize = 11.sp, fontWeight = FontWeight.Bold) },
-                                        shape = RoundedCornerShape(12.dp),
-                                        colors = SuggestionChipDefaults.suggestionChipColors(
-                                            containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
-                                        )
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Matching AI Tools (if any)
-                if (searchResults.matchingTools.isNotEmpty()) {
-                    item(span = { GridItemSpan(maxLineSpan) }) {
-                        Column(modifier = Modifier.padding(vertical = 4.dp)) {
-                            Text(
-                                text = "AI TOOLS & PLATFORMS",
-                                fontSize = 10.5.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.secondary,
-                                letterSpacing = 0.5.sp
-                            )
-                            Spacer(modifier = Modifier.height(6.dp))
-                            searchResults.matchingTools.take(2).forEach { tool ->
-                                Card(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(bottom = 6.dp)
-                                        .clickable {
-                                            if (tool.websiteUrl.isNotBlank()) {
-                                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(tool.websiteUrl))
-                                                context.startActivity(intent)
-                                            }
-                                        },
-                                    shape = RoundedCornerShape(10.dp),
-                                    colors = CardDefaults.cardColors(
-                                        containerColor = MaterialTheme.colorScheme.surface
-                                    ),
-                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(10.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                                    ) {
-                                        Surface(
-                                            shape = RoundedCornerShape(6.dp),
-                                            color = MaterialTheme.colorScheme.primaryContainer,
-                                            modifier = Modifier.size(32.dp)
-                                        ) {
-                                            Box(contentAlignment = Alignment.Center) {
-                                                Icon(
-                                                    imageVector = Icons.Default.AutoAwesome,
-                                                    contentDescription = null,
-                                                    tint = MaterialTheme.colorScheme.primary,
-                                                    modifier = Modifier.size(16.dp)
-                                                )
-                                            }
-                                        }
-
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            Text(
-                                                text = tool.name,
-                                                fontSize = 12.5.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.onSurface
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(columnCount),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 20.dp)
+                ) {
+                    // Matching Categories Row (if any)
+                    if (searchResults.matchingCategories.isNotEmpty()) {
+                        item(span = { GridItemSpan(columnCount) }) {
+                            Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                                Text(
+                                    text = "CATEGORIES",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    items(searchResults.matchingCategories) { cat ->
+                                        SuggestionChip(
+                                            onClick = {
+                                                viewModel.setCategory(cat)
+                                                onSelectCategory?.invoke(cat)
+                                            },
+                                            label = { Text(text = cat, fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                                            shape = RoundedCornerShape(10.dp),
+                                            colors = SuggestionChipDefaults.suggestionChipColors(
+                                                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
                                             )
-                                            Text(
-                                                text = tool.category,
-                                                fontSize = 10.5.sp,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
-
-                                        Icon(
-                                            imageVector = Icons.Outlined.OpenInNew,
-                                            contentDescription = "Open Tool",
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            modifier = Modifier.size(16.dp)
                                         )
                                     }
                                 }
                             }
                         }
                     }
-                }
 
-                // Section Title: Prompts
-                if (searchResults.topPrompts.isNotEmpty()) {
-                    item(span = { GridItemSpan(maxLineSpan) }) {
+                    // Count header
+                    item(span = { GridItemSpan(columnCount) }) {
                         Text(
-                            text = "AI PROMPTS",
-                            fontSize = 11.sp,
+                            text = "${searchResults.topPrompts.size} matching prompts",
+                            fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onBackground,
-                            letterSpacing = 0.5.sp,
-                            modifier = Modifier.padding(top = 4.dp)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 2.dp)
                         )
                     }
 
@@ -409,4 +273,3 @@ fun SearchScreen(
         }
     }
 }
-

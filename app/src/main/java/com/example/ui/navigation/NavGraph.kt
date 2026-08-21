@@ -69,26 +69,20 @@ fun AppNavigation(
             navController = navController,
             startDestination = Screen.Home.route,
             modifier = Modifier.padding(innerPadding),
-            enterTransition = { fadeIn(animationSpec = tween(150)) },
-            exitTransition = { fadeOut(animationSpec = tween(130)) },
-            popEnterTransition = { fadeIn(animationSpec = tween(150)) },
-            popExitTransition = { fadeOut(animationSpec = tween(130)) }
+            enterTransition = { fadeIn(animationSpec = tween(140)) },
+            exitTransition = { fadeOut(animationSpec = tween(120)) },
+            popEnterTransition = { fadeIn(animationSpec = tween(140)) },
+            popExitTransition = { fadeOut(animationSpec = tween(120)) }
         ) {
             composable(Screen.Home.route) {
                 HomeScreen(
                     viewModel = viewModel,
-                    onNavigateToLibrary = { navController.navigate(Screen.Prompts.route) },
-                    onNavigateToCategories = { navController.navigate(Screen.Categories.route) },
-                    onNavigateToImages = { navController.navigate(Screen.Images.route) },
-                    onNavigateToTools = { navController.navigate(Screen.Tools.route) },
-                    onNavigateToApps = { navController.navigate(Screen.Apps.route) },
-                    onNavigateToStudio = { navController.navigate(Screen.Studio.route) },
-                    onNavigateToTutorials = { navController.navigate("tutorials") },
-                    onNavigateToProfile = { navController.navigate(Screen.Profile.route) },
-                    onNavigateToDetail = { prompt ->
+                    onSelectPrompt = { prompt ->
                         viewModel.selectPrompt(prompt)
                         navController.navigate("detail")
-                    }
+                    },
+                    onNavigateToSearch = { navController.navigate("search") },
+                    onNavigateToCategories = { navController.navigate(Screen.Categories.route) }
                 )
             }
 
@@ -112,17 +106,6 @@ fun AppNavigation(
                 )
             }
 
-            composable(Screen.Tools.route) {
-                AiToolsScreen(
-                    viewModel = viewModel,
-                    onNavigateToStudio = { navController.navigate(Screen.Studio.route) }
-                )
-            }
-
-            composable(Screen.Apps.route) {
-                AppsScreen(viewModel = viewModel)
-            }
-
             composable(Screen.Saved.route) {
                 FavoritesScreen(
                     viewModel = viewModel,
@@ -133,24 +116,8 @@ fun AppNavigation(
                 )
             }
 
-            composable(Screen.Images.route) {
-                ImageGalleryScreen(viewModel = viewModel)
-            }
-
-            composable(Screen.Studio.route) {
-                AiPromptStudioScreen(viewModel = viewModel)
-            }
-
             composable(Screen.Profile.route) {
                 CreatorProfileScreen(viewModel = viewModel)
-            }
-
-            composable("tutorials") {
-                TutorialsScreen(viewModel = viewModel)
-            }
-
-            composable("settings") {
-                SettingsScreen(viewModel = viewModel)
             }
 
             composable("search") {
