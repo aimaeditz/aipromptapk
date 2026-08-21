@@ -19,7 +19,12 @@ import com.example.data.repository.PromptRepository
 import com.example.data.repository.RemoteConfigRepository
 import com.example.data.repository.ToolRepository
 import com.example.data.repository.TutorialRepository
+import com.example.data.search.SearchIntent
+import com.example.data.search.SearchRankingService
+import com.example.data.search.SearchService
+import com.example.data.search.UnifiedSearchResults
 import com.example.ui.theme.AppThemeMode
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.isActive
@@ -28,6 +33,7 @@ import okhttp3.OkHttpClient
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val okHttpClient: OkHttpClient by lazy {
@@ -47,6 +53,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val tutorialRepository = TutorialRepository(db.promptDao())
     val adMobConfigRepository = AdMobConfigRepository()
     private val remoteConfigRepository = RemoteConfigRepository(application, viewModelScope)
+    private val searchService = SearchService()
 
     // Remote Configuration State Flow (Safe, validated, local-first with background updates)
     val remoteConfig: StateFlow<AppRemoteConfig> = remoteConfigRepository.config
@@ -55,8 +62,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _isOffline = MutableStateFlow(false)
     val isOffline: StateFlow<Boolean> = _isOffline.asStateFlow()
 
-    // Theme Mode State
-    private val _themeMode = MutableStateFlow(AppThemeMode.SYSTEM)
+    // Theme Mode State - LIGHT Mode is the default
+    private val _themeMode = MutableStateFlow(AppThemeMode.LIGHT)
     val themeMode: StateFlow<AppThemeMode> = _themeMode.asStateFlow()
 
     // Search Query
@@ -106,6 +113,29 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     val distinctCategories: StateFlow<List<String>> = promptRepository.distinctCategories
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    private data class SearchParams(
+        val query: String,
+        val prompts: List<PromptItem>,
+        val images: List<GalleryImage>,
+        val tools: List<AiTool>
+    )
+
+    // Unified AI Hybrid Search Flow
+    val unifiedSearchResults: StateFlow<UnifiedSearchResults> = combine(
+        _searchQuery.debounce(150),
+        allPrompts,
+        galleryImages,
+        aiTools
+    ) { query: String, prompts: List<PromptItem>, images: List<GalleryImage>, tools: List<AiTool> ->
+        SearchParams(query, prompts, images, tools)
+    }.flatMapLatest { params ->
+        searchService.performSearch(params.query, params.prompts, params.images, params.tools)
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        UnifiedSearchResults(query = "")
+    )
 
     // Pull-to-refresh / manual refresh state
     private val _isRefreshing = MutableStateFlow(false)

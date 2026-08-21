@@ -1,7 +1,6 @@
 package com.example.ui.theme
 
 import android.app.Activity
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -13,17 +12,17 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 enum class AppThemeMode {
-    SYSTEM, DARK, LIGHT
+    LIGHT, DARK, SYSTEM
 }
 
 private val DarkColorScheme = darkColorScheme(
-    primary = AiCyanPrimary,
+    primary = AiDarkPrimary,
     onPrimary = AiDarkBackground,
     primaryContainer = AiDarkSurfaceVariant,
-    onPrimaryContainer = AiCyanPrimary,
-    secondary = AiVioletSecondary,
+    onPrimaryContainer = AiDarkPrimary,
+    secondary = AiDarkSecondary,
     onSecondary = AiDarkTextPrimary,
-    tertiary = AiEmeraldTertiary,
+    tertiary = AiDarkTertiary,
     background = AiDarkBackground,
     onBackground = AiDarkTextPrimary,
     surface = AiDarkSurface,
@@ -52,13 +51,13 @@ private val LightColorScheme = lightColorScheme(
 
 @Composable
 fun AiPromptXpertTheme(
-    themeMode: AppThemeMode = AppThemeMode.SYSTEM,
+    themeMode: AppThemeMode = AppThemeMode.LIGHT,
     content: @Composable () -> Unit
 ) {
     val darkTheme = when (themeMode) {
-        AppThemeMode.SYSTEM -> isSystemInDarkTheme()
-        AppThemeMode.DARK -> true
         AppThemeMode.LIGHT -> false
+        AppThemeMode.DARK -> true
+        AppThemeMode.SYSTEM -> isSystemInDarkTheme()
     }
 
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
@@ -80,3 +79,4 @@ fun AiPromptXpertTheme(
         content = content
     )
 }
+

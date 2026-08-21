@@ -160,6 +160,10 @@ fun AppNavigation(
                     onSelectPrompt = { prompt ->
                         viewModel.selectPrompt(prompt)
                         navController.navigate("detail")
+                    },
+                    onSelectCategory = { category ->
+                        viewModel.setCategory(category)
+                        navController.navigate(Screen.Prompts.route)
                     }
                 )
             }
