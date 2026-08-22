@@ -22,7 +22,8 @@ class BloggerDataSource(
     /**
      * Fetches all real posts from the Blogger feed URL.
      * Parses all images and their associated exact AI prompts.
-     * Imports latest posts without caching stale feed responses.
+     * Enforces unique post identity priority: Blogger Post ID -> Post URL -> Prompt Code.
+     * Strictly prevents duplicates across feeds and pagination.
      */
     fun fetchPromptsFromFeedUrl(rawFeedUrl: String): Pair<List<PromptItem>, List<GalleryImage>> {
         val prompts = mutableListOf<PromptItem>()
@@ -54,13 +55,45 @@ class BloggerDataSource(
             val entriesArray = feedObj.optJSONArray("entry") ?: return Pair(emptyList(), emptyList())
 
             val rawEntries = mutableListOf<BloggerPostEntry>()
+            val seenEntryPostIds = mutableSetOf<String>()
+            val seenEntryUrls = mutableSetOf<String>()
 
             for (i in 0 until entriesArray.length()) {
                 val entryObj = entriesArray.optJSONObject(i) ?: continue
 
                 val idObj = entryObj.optJSONObject("id")
-                val rawId = idObj?.optString("\$t") ?: "post-$i"
-                val postId = rawId.substringAfterLast("post-", "post-$i")
+                val rawId = idObj?.optString("\$t") ?: ""
+                val postId = if (rawId.contains("post-")) {
+                    rawId.substringAfterLast("post-").trim()
+                } else if (rawId.isNotBlank()) {
+                    rawId.trim()
+                } else {
+                    "post_$i"
+                }
+
+                // Extract post alternate URL
+                var postUrl = ""
+                val linkArray = entryObj.optJSONArray("link")
+                if (linkArray != null) {
+                    for (l in 0 until linkArray.length()) {
+                        val lObj = linkArray.optJSONObject(l)
+                        if (lObj?.optString("rel") == "alternate") {
+                            postUrl = lObj.optString("href", "")
+                            break
+                        }
+                    }
+                }
+                if (postUrl.isBlank()) {
+                    postUrl = "$rawFeedUrl#$postId"
+                }
+
+                // Deduplicate feed entries by Blogger Post ID or Post URL
+                if (postId.isNotBlank() && postId != "post_$i" && !seenEntryPostIds.add(postId)) {
+                    continue
+                }
+                if (postUrl.isNotBlank() && !seenEntryUrls.add(postUrl.lowercase())) {
+                    continue
+                }
 
                 val titleObj = entryObj.optJSONObject("title")
                 val postTitle = titleObj?.optString("\$t")?.trim() ?: "AI Prompt"
@@ -88,19 +121,6 @@ class BloggerDataSource(
                     }
                 }
 
-                // Extract post alternate URL
-                var postUrl = rawFeedUrl
-                val linkArray = entryObj.optJSONArray("link")
-                if (linkArray != null) {
-                    for (l in 0 until linkArray.length()) {
-                        val lObj = linkArray.optJSONObject(l)
-                        if (lObj?.optString("rel") == "alternate") {
-                            postUrl = lObj.optString("href", rawFeedUrl)
-                            break
-                        }
-                    }
-                }
-
                 rawEntries.add(
                     BloggerPostEntry(
                         postId = postId,
@@ -113,9 +133,17 @@ class BloggerDataSource(
                 )
             }
 
+            // Global deduplication trackers for prompts and images
+            val globalSeenPromptTexts = mutableSetOf<String>()
+            val globalSeenImageUrls = mutableSetOf<String>()
+
             // Process posts and extract accurate prompts and high-res images
             for (entry in rawEntries) {
-                val (extractedPrompts, extractedGallery) = parseBloggerPost(entry)
+                val (extractedPrompts, extractedGallery) = parseBloggerPost(
+                    entry = entry,
+                    seenPrompts = globalSeenPromptTexts,
+                    seenImages = globalSeenImageUrls
+                )
                 prompts.addAll(extractedPrompts)
                 gallery.addAll(extractedGallery)
             }
@@ -132,10 +160,16 @@ class BloggerDataSource(
      * 1. The main image(s) with high resolution.
      * 2. The exact AI image prompt associated with each image.
      *
-     * If a post contains multiple prompts, each is preserved as an individual prompt record.
-     * Never generates fake AI prompt text or sample images.
+     * Unique ID Priority:
+     * 1. Blogger Post ID
+     * 2. Post URL
+     * 3. Prompt Code / Hash
      */
-    private fun parseBloggerPost(entry: BloggerPostEntry): Pair<List<PromptItem>, List<GalleryImage>> {
+    private fun parseBloggerPost(
+        entry: BloggerPostEntry,
+        seenPrompts: MutableSet<String>,
+        seenImages: MutableSet<String>
+    ): Pair<List<PromptItem>, List<GalleryImage>> {
         val prompts = mutableListOf<PromptItem>()
         val gallery = mutableListOf<GalleryImage>()
 
@@ -163,10 +197,15 @@ class BloggerDataSource(
                 val cleanedPrompt = cleanPromptText(promptText)
                 if (cleanedPrompt.length < 15) continue // Skip non-prompt artifacts
 
+                val normalizedText = normalizePromptForDedup(cleanedPrompt)
+                if (!seenPrompts.add(normalizedText)) {
+                    // Already processed this exact prompt text across feeds
+                    continue
+                }
+
                 val imgUrl = if (i < images.size) images[i] else defaultImage
-                val codeNum = 100 + (entry.postId.hashCode().let { if (it < 0) -it else it } % 899 + i)
-                val promptCode = "#$codeNum"
-                val stableId = generateStableId(entry.postId, i, cleanedPrompt)
+                val promptCode = generateDeterministicPromptCode(entry.postId, entry.postUrl, i)
+                val stableId = generatePriorityUniqueId(entry.postId, entry.postUrl, promptCode, i, cleanedPrompt)
                 val itemTitle = if (promptTexts.size > 1) "${entry.title} (#${i + 1})" else entry.title
                 val platform = determinePlatform(cleanedPrompt)
 
@@ -188,7 +227,7 @@ class BloggerDataSource(
 
                 prompts.add(promptItem)
 
-                if (imgUrl.isNotBlank()) {
+                if (imgUrl.isNotBlank() && seenImages.add(imgUrl.lowercase())) {
                     gallery.add(
                         GalleryImage(
                             id = "gallery_${stableId}",
@@ -209,11 +248,21 @@ class BloggerDataSource(
             val fallbackPrompt = extractFallbackPromptFromText(entry.htmlContent)
             if (fallbackPrompt.isNotBlank()) {
                 val cleanedPrompt = cleanPromptText(fallbackPrompt)
+                val normalizedText = normalizePromptForDedup(cleanedPrompt)
+
                 for (i in images.indices) {
                     val imgUrl = images[i]
-                    val codeNum = 100 + (entry.postId.hashCode().let { if (it < 0) -it else it } % 899 + i)
-                    val promptCode = "#$codeNum"
-                    val stableId = generateStableId(entry.postId, i, "$cleanedPrompt-$i")
+                    if (imgUrl.isBlank() || !seenImages.add(imgUrl.lowercase())) {
+                        continue
+                    }
+
+                    val promptDedupKey = if (images.size > 1) "$normalizedText-img-$i" else normalizedText
+                    if (!seenPrompts.add(promptDedupKey)) {
+                        continue
+                    }
+
+                    val promptCode = generateDeterministicPromptCode(entry.postId, entry.postUrl, i)
+                    val stableId = generatePriorityUniqueId(entry.postId, entry.postUrl, promptCode, i, "$cleanedPrompt-$i")
                     val itemTitle = if (images.size > 1) "${entry.title} (Image ${i + 1})" else entry.title
                     val platform = determinePlatform(cleanedPrompt)
 
@@ -252,6 +301,61 @@ class BloggerDataSource(
         }
 
         return Pair(prompts, gallery)
+    }
+
+    private fun normalizePromptForDedup(text: String): String {
+        return text.lowercase()
+            .replace(Regex("[^a-z0-9]"), "")
+            .trim()
+    }
+
+    private fun generateDeterministicPromptCode(postId: String, postUrl: String, index: Int): String {
+        val seed = if (postId.isNotBlank() && !postId.startsWith("post_")) {
+            postId.hashCode()
+        } else if (postUrl.isNotBlank()) {
+            postUrl.hashCode()
+        } else {
+            (index + 1).hashCode()
+        }
+        val pos = (seed.let { if (it < 0) -it else it } % 899) + 100 + index
+        return "#$pos"
+    }
+
+    /**
+     * Generates a unique, deterministic ID following the required priority:
+     * 1. Blogger Post ID -> "blogger_${postId}_$index"
+     * 2. Post URL -> "post_${urlHash}_$index"
+     * 3. Prompt Code -> "code_${promptCode}_$index"
+     */
+    private fun generatePriorityUniqueId(
+        postId: String,
+        postUrl: String,
+        promptCode: String,
+        index: Int,
+        promptText: String
+    ): String {
+        return if (postId.isNotBlank() && !postId.startsWith("post_")) {
+            if (index == 0) "blogger_$postId" else "blogger_${postId}_$index"
+        } else if (postUrl.isNotBlank()) {
+            val md5Url = md5(postUrl)
+            if (index == 0) "url_$md5Url" else "url_${md5Url}_$index"
+        } else if (promptCode.isNotBlank()) {
+            val cleanCode = promptCode.removePrefix("#")
+            if (index == 0) "code_$cleanCode" else "code_${cleanCode}_$index"
+        } else {
+            val md5Text = md5(promptText)
+            "hash_${md5Text}_$index"
+        }
+    }
+
+    private fun md5(input: String): String {
+        return try {
+            val md = MessageDigest.getInstance("MD5")
+            val digest = md.digest(input.toByteArray())
+            digest.joinToString("") { "%02x".format(it) }
+        } catch (_: Exception) {
+            input.hashCode().toString()
+        }
     }
 
     /**
@@ -523,13 +627,6 @@ class BloggerDataSource(
             System.currentTimeMillis()
         }
     }
-
-    private fun generateStableId(postId: String, index: Int, promptText: String): String {
-        val input = "$postId-$index-${promptText.hashCode()}"
-        val md = MessageDigest.getInstance("MD5")
-        val digest = md.digest(input.toByteArray())
-        return digest.joinToString("") { "%02x".format(it) }
-    }
 }
 
 data class BloggerPostEntry(
@@ -540,3 +637,4 @@ data class BloggerPostEntry(
     val categories: List<String>,
     val postUrl: String
 )
+

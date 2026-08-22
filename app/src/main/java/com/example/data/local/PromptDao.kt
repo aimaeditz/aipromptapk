@@ -51,8 +51,11 @@ interface PromptDao {
     @Query("DELETE FROM gallery_images WHERE id LIKE '%aimaeditz%'")
     suspend fun purgeAimaeditzGallery()
 
-    @Query("DELETE FROM prompts WHERE id NOT IN (SELECT MIN(id) FROM prompts GROUP BY exactPrompt)")
+    @Query("DELETE FROM prompts WHERE rowid NOT IN (SELECT MIN(rowid) FROM prompts GROUP BY exactPrompt)")
     suspend fun purgeDuplicatePromptsByText()
+
+    @Query("DELETE FROM gallery_images WHERE rowid NOT IN (SELECT MIN(rowid) FROM gallery_images GROUP BY imageUrl)")
+    suspend fun purgeDuplicateGalleryImages()
 
     @Query("DELETE FROM prompts")
     suspend fun clearAllPrompts()

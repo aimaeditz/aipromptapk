@@ -11,6 +11,7 @@ import android.net.NetworkRequest
 import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.data.category.SmartCategoryEngine
 import com.example.data.local.AppDatabase
 import com.example.data.local.FavoriteEntity
 import com.example.data.model.*
@@ -114,6 +115,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val distinctCategories: StateFlow<List<String>> = promptRepository.distinctCategories
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
+    // Dynamic Smart Category Discovery Index with real counts and prompt thumbnails
+    val smartCategories: StateFlow<List<SmartCategory>> = combine(
+        allPrompts,
+        galleryImages
+    ) { prompts, images ->
+        SmartCategoryEngine.buildCategoryIndex(prompts, images)
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    fun isPromptInSelectedCategory(prompt: PromptItem, categoryName: String): Boolean {
+        return SmartCategoryEngine.isPromptInCategory(prompt, categoryName, smartCategories.value)
+    }
+
     private data class SearchParams(
         val query: String,
         val prompts: List<PromptItem>,
@@ -137,6 +150,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         UnifiedSearchResults(query = "")
     )
 
+    // Initial Loading State (Prevents '0 prompts' and 'No prompts found' flash on first launch)
+    private val _isInitialLoading = MutableStateFlow(true)
+    val isInitialLoading: StateFlow<Boolean> = _isInitialLoading.asStateFlow()
+
     // Pull-to-refresh / manual refresh state
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
@@ -149,11 +166,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         monitorNetworkConnectivity()
 
         viewModelScope.launch {
-            // 1. Initialize local cache and purge any legacy fake mock data
-            promptRepository.initializeSeedData()
+            try {
+                // 1. Initialize local cache and purge any legacy fake mock data
+                promptRepository.initializeSeedData()
 
-            // 2. Perform initial silent background Blogger synchronization
-            syncBloggerContentSilently()
+                // 2. Perform initial silent background Blogger synchronization
+                syncBloggerContentSilently()
+            } catch (_: Exception) {
+            } finally {
+                _isInitialLoading.value = false
+            }
 
             // 3. Periodic background sync loop (every 3 minutes) for future Blogger posts
             while (isActive) {

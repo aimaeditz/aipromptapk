@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.CachePolicy
 import coil.request.ImageRequest
+import com.example.data.category.SmartCategoryEngine
 import com.example.data.model.PromptItem
 import com.example.ui.components.AdMobBanner
 import com.example.ui.components.PromptCard
@@ -63,7 +64,11 @@ fun PromptDetailScreen(
 
     val relatedPrompts = remember(allPrompts, prompt) {
         allPrompts.filter {
-            it.id != prompt.id && (it.category == prompt.category || it.platform == prompt.platform)
+            it.id != prompt.id && (
+                SmartCategoryEngine.isPromptInCategory(it, prompt.category) ||
+                it.platform.equals(prompt.platform, ignoreCase = true) ||
+                it.tags.contains(prompt.category, ignoreCase = true)
+            )
         }.take(6)
     }
 

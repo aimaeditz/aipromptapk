@@ -34,6 +34,8 @@ fun PromptLibraryScreen(
     onPromptDetailSelect: (PromptItem) -> Unit
 ) {
     val allPrompts by viewModel.allPrompts.collectAsState()
+    val smartCategories by viewModel.smartCategories.collectAsState()
+    val isInitialLoading by viewModel.isInitialLoading.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val selectedCategory by viewModel.selectedCategory.collectAsState()
     val selectedPlatform by viewModel.selectedPlatform.collectAsState()
@@ -41,13 +43,21 @@ fun PromptLibraryScreen(
 
     val favIds = favorites.map { it.itemId }.toSet()
 
-    val categories = remember(allPrompts) {
-        val distinct = allPrompts
-            .map { it.category.trim() }
-            .filter { it.isNotBlank() && it != "All" }
+    val categories = remember(smartCategories, allPrompts) {
+        val catList = smartCategories
+            .filter { it.promptCount > 0 }
+            .map { it.displayName }
             .distinct()
-            .sorted()
-        listOf("All") + distinct
+        if (catList.isEmpty()) {
+            val distinct = allPrompts
+                .map { it.category.trim() }
+                .filter { it.isNotBlank() && it != "All" }
+                .distinct()
+                .sorted()
+            listOf("All") + distinct
+        } else {
+            listOf("All") + catList
+        }
     }
 
     val platforms = remember(allPrompts) {
@@ -59,9 +69,9 @@ fun PromptLibraryScreen(
         if (distinct.isEmpty()) listOf("All") else listOf("All") + distinct
     }
 
-    val filteredPrompts = remember(allPrompts, searchQuery, selectedCategory, selectedPlatform) {
+    val filteredPrompts = remember(allPrompts, smartCategories, searchQuery, selectedCategory, selectedPlatform) {
         allPrompts.filter { prompt ->
-            val matchesCategory = selectedCategory == "All" || prompt.category.equals(selectedCategory, ignoreCase = true) || prompt.category.contains(selectedCategory, ignoreCase = true)
+            val matchesCategory = selectedCategory == "All" || viewModel.isPromptInSelectedCategory(prompt, selectedCategory)
             val matchesPlatform = selectedPlatform == "All" || prompt.platform.equals(selectedPlatform, ignoreCase = true) || prompt.platform.contains(selectedPlatform, ignoreCase = true)
             val matchesQuery = searchQuery.isBlank() ||
                     prompt.title.contains(searchQuery, ignoreCase = true) ||
@@ -142,87 +152,113 @@ fun PromptLibraryScreen(
 
         Spacer(modifier = Modifier.height(6.dp))
 
-        // Header info count
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 2.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "${filteredPrompts.size} AI Prompts",
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            if (selectedCategory != "All" || selectedPlatform != "All" || searchQuery.isNotEmpty()) {
-                TextButton(
-                    onClick = {
-                        viewModel.setCategory("All")
-                        viewModel.setPlatform("All")
-                        viewModel.setSearchQuery("")
-                    },
-                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
-                ) {
-                    Text(text = "Clear Filters", fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
-                }
-            }
-        }
-
-        // Prompts Grid (Instant, smooth scroll with stable item keys)
-        if (filteredPrompts.isEmpty()) {
+        if (isInitialLoading && allPrompts.isEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f),
                 contentAlignment = Alignment.Center
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        imageVector = Icons.Default.SearchOff,
-                        contentDescription = null,
-                        modifier = Modifier.size(46.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(32.dp),
+                        strokeWidth = 3.dp,
+                        color = MaterialTheme.colorScheme.primary
                     )
-                    Spacer(modifier = Modifier.height(10.dp))
                     Text(
-                        text = "No prompts found for selected filters",
+                        text = "Loading prompts...",
                         fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "Try clearing filters or searching another keyword",
-                        fontSize = 11.5.sp,
+                        fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
         } else {
-            LazyVerticalGrid(
-                columns = GridCells.Adaptive(minSize = 160.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(bottom = 16.dp)
+            // Header info count
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 2.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                items(filteredPrompts, key = { it.id }) { prompt ->
-                    PromptCard(
-                        prompt = prompt,
-                        isFavorite = favIds.contains(prompt.id),
-                        onPromptClick = {
-                            viewModel.selectPrompt(prompt)
-                            onPromptDetailSelect(prompt)
+                Text(
+                    text = "${filteredPrompts.size} AI Prompts",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                if (selectedCategory != "All" || selectedPlatform != "All" || searchQuery.isNotEmpty()) {
+                    TextButton(
+                        onClick = {
+                            viewModel.setCategory("All")
+                            viewModel.setPlatform("All")
+                            viewModel.setSearchQuery("")
                         },
-                        onCopyClick = {
-                            viewModel.copyPromptToClipboard(prompt.exactPrompt)
-                        },
-                        onFavoriteClick = {
-                            viewModel.toggleFavorite(prompt)
-                        }
-                    )
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(text = "Clear Filters", fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+
+            // Prompts Grid (Instant, smooth scroll with stable item keys)
+            if (filteredPrompts.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            imageVector = Icons.Default.SearchOff,
+                            contentDescription = null,
+                            modifier = Modifier.size(46.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text(
+                            text = "No prompts found for selected filters",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Try clearing filters or searching another keyword",
+                            fontSize = 11.5.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            } else {
+                LazyVerticalGrid(
+                    columns = GridCells.Adaptive(minSize = 160.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(bottom = 16.dp)
+                ) {
+                    items(filteredPrompts, key = { it.id }) { prompt ->
+                        PromptCard(
+                            prompt = prompt,
+                            isFavorite = favIds.contains(prompt.id),
+                            onPromptClick = {
+                                viewModel.selectPrompt(prompt)
+                                onPromptDetailSelect(prompt)
+                            },
+                            onCopyClick = {
+                                viewModel.copyPromptToClipboard(prompt.exactPrompt)
+                            },
+                            onFavoriteClick = {
+                                viewModel.toggleFavorite(prompt)
+                            }
+                        )
+                    }
                 }
             }
         }

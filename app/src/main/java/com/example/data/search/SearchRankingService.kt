@@ -1,13 +1,15 @@
 package com.example.data.search
 
+import com.example.data.category.SmartCategoryEngine
 import com.example.data.model.AiTool
 import com.example.data.model.GalleryImage
 import com.example.data.model.PromptItem
+import com.example.data.model.SmartCategory
 
 object SearchRankingService {
 
     /**
-     * Executes ranking across prompts, gallery images, categories, and AI tools.
+     * Executes ranking across prompts, gallery images, smart categories, and AI tools.
      */
     fun rankResults(
         query: String,
@@ -18,9 +20,14 @@ object SearchRankingService {
         isAiInterpreted: Boolean
     ): UnifiedSearchResults {
         val trimmed = query.trim()
+        val categoryIndex = SmartCategoryEngine.buildCategoryIndex(allPrompts, allImages)
+
         if (trimmed.isEmpty()) {
+            val topCategories = categoryIndex.filter { it.promptCount > 0 }.take(8)
             return UnifiedSearchResults(
                 query = "",
+                matchingSmartCategories = topCategories,
+                matchingCategories = topCategories.map { it.displayName },
                 smartSuggestions = listOf(
                     "3D Avatar",
                     "Boy Kurta",
@@ -62,10 +69,16 @@ object SearchRankingService {
                 matchReason = "Title match"
             }
 
+            // Category match via SmartCategoryEngine
+            if (SmartCategoryEngine.isPromptInCategory(prompt, trimmed, categoryIndex)) {
+                score += 75f
+                if (matchReason.isEmpty()) matchReason = "Category match"
+            }
+
             // Semantic subject match
             if (intent.subject != null) {
                 val subjLower = intent.subject.lowercase()
-                if (titleLower.contains(subjLower) || categoryLower.contains(subjLower) || tagsLower.contains(subjLower)) {
+                if (titleLower.contains(subjLower) || categoryLower.contains(subjLower) || tagsLower.contains(subjLower) || promptLower.contains(subjLower)) {
                     score += 60f
                 }
             }
@@ -136,13 +149,11 @@ object SearchRankingService {
             .sortedByDescending { it.relevanceScore }
             .map { it.image }
 
-        // --- 3. Match Categories ---
-        val distinctCategories = allPrompts.map { it.category.trim() }.filter { it.isNotBlank() && it != "All" }.distinct()
-        val matchedCategories = distinctCategories.filter { cat ->
-            val catLower = cat.lowercase()
-            catLower.contains(qLower) || keywords.any { kw -> catLower.contains(kw) } ||
-                    (intent.subject != null && catLower.contains(intent.subject.lowercase()))
-        }
+        // --- 3. Match Smart Categories with counts and imagery ---
+        val matchedSmartCategories = SmartCategoryEngine.searchCategories(trimmed, categoryIndex)
+            .filter { it.promptCount > 0 }
+            .take(6)
+        val matchedCategoryNames = matchedSmartCategories.map { it.displayName }
 
         // --- 4. Match AI Tools ---
         val matchedTools = allTools.filter { tool ->
@@ -155,16 +166,17 @@ object SearchRankingService {
         }
 
         // --- 5. Generate Smart Suggestions ---
-        val smartSuggestions = generateSuggestions(query, intent, scoredPrompts)
+        val smartSuggestions = generateSuggestions(query, intent, scoredPrompts, categoryIndex)
 
-        val totalCount = scoredPrompts.size + scoredImages.size + matchedCategories.size + matchedTools.size
+        val totalCount = scoredPrompts.size + scoredImages.size + matchedSmartCategories.size + matchedTools.size
 
         return UnifiedSearchResults(
             query = query,
             intent = intent,
             topPrompts = scoredPrompts,
             topImages = scoredImages,
-            matchingCategories = matchedCategories,
+            matchingCategories = matchedCategoryNames,
+            matchingSmartCategories = matchedSmartCategories,
             matchingTools = matchedTools,
             smartSuggestions = smartSuggestions,
             isAiInterpreted = isAiInterpreted,
@@ -175,7 +187,8 @@ object SearchRankingService {
     private fun generateSuggestions(
         query: String,
         intent: SearchIntent,
-        topPrompts: List<PromptItem>
+        topPrompts: List<PromptItem>,
+        categoryIndex: List<SmartCategory>
     ): List<String> {
         val qLower = query.lowercase().trim()
         val suggestions = mutableListOf<String>()
@@ -196,9 +209,15 @@ object SearchRankingService {
             qLower.contains("couple") -> {
                 suggestions.addAll(listOf("Couple Portrait", "Wedding Couple", "Romantic Couple", "3D Couple Avatar"))
             }
+            qLower.contains("sea") || qLower.contains("beach") -> {
+                suggestions.addAll(listOf("Seaside Waves", "Sunset Beach", "Tropical Island", "Ocean View"))
+            }
+            qLower.contains("land") || qLower.contains("nature") -> {
+                suggestions.addAll(listOf("Landscape Mountains", "Nature Forest", "River Scenery", "Green Hills"))
+            }
             else -> {
-                // If empty or generic, extract top categories/titles
-                topPrompts.take(4).forEach { suggestions.add(it.title) }
+                topPrompts.take(3).forEach { suggestions.add(it.title) }
+                categoryIndex.filter { it.promptCount > 0 }.take(3).forEach { suggestions.add(it.displayName) }
                 if (suggestions.isEmpty()) {
                     suggestions.addAll(listOf("3D Avatar", "Boy Prompts", "Girl Prompts", "Islamic Prompts", "Gemini AI", "Luxury"))
                 }

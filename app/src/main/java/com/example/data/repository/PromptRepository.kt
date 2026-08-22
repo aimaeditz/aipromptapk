@@ -34,6 +34,7 @@ class PromptRepository(
         promptDao.purgeAimaeditzPrompts()
         promptDao.purgeAimaeditzGallery()
         promptDao.purgeDuplicatePromptsByText()
+        promptDao.purgeDuplicateGalleryImages()
 
         // 2. Initialize tools and tutorials if not yet present
         val existingTools = promptDao.getAllTools().first()
@@ -143,6 +144,7 @@ class PromptRepository(
 
             // Cleanup any duplicate entries if they ever existed
             promptDao.purgeDuplicatePromptsByText()
+            promptDao.purgeDuplicateGalleryImages()
         }
 
         return@withContext totalImported

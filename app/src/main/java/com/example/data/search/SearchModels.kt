@@ -3,6 +3,7 @@ package com.example.data.search
 import com.example.data.model.AiTool
 import com.example.data.model.GalleryImage
 import com.example.data.model.PromptItem
+import com.example.data.model.SmartCategory
 
 /**
  * Structured search intent extracted from natural language queries.
@@ -53,6 +54,7 @@ data class UnifiedSearchResults(
     val topPrompts: List<PromptItem> = emptyList(),
     val topImages: List<GalleryImage> = emptyList(),
     val matchingCategories: List<String> = emptyList(),
+    val matchingSmartCategories: List<SmartCategory> = emptyList(),
     val matchingTools: List<AiTool> = emptyList(),
     val smartSuggestions: List<String> = emptyList(),
     val isAiInterpreted: Boolean = false,
