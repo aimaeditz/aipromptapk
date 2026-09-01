@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.components.GlassCard
+import com.example.ui.components.saasBackgroundGlow
 import com.example.ui.components.subtleGlow
 import com.example.ui.viewmodel.MainViewModel
 
@@ -55,6 +56,7 @@ fun AiToolsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .saasBackgroundGlow()
             .padding(horizontal = 14.dp)
     ) {
         Spacer(modifier = Modifier.height(8.dp))
@@ -62,25 +64,33 @@ fun AiToolsScreen(
         // Compact Header
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Icon(
-                imageVector = Icons.Default.Build,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(18.dp)
-            )
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f),
+                modifier = Modifier.size(32.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Default.Build,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
             Text(
-                text = "AI CREATIVE TOOLSUITE",
-                fontSize = 17.sp,
-                fontWeight = FontWeight.Black,
+                text = "AI Creative Toolsuite",
+                fontSize = 17.5.sp,
+                fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
             )
         }
         Text(
             text = "6 unified tools for prompt generation, enhancement & formatting",
             fontSize = 11.5.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
         )
 
         Spacer(modifier = Modifier.height(10.dp))
@@ -99,7 +109,7 @@ fun AiToolsScreen(
                         Text(
                             text = tool.shortLabel,
                             fontSize = 11.5.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                         )
                     },
                     leadingIcon = {
@@ -107,18 +117,16 @@ fun AiToolsScreen(
                             imageVector = tool.icon,
                             contentDescription = null,
                             modifier = Modifier.size(14.dp),
-                            tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = if (isSelected) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     },
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = if (isSelected) {
-                        Modifier.subtleGlow(
-                            color = MaterialTheme.colorScheme.primary,
-                            radius = 4.dp,
-                            alpha = 0.2f,
-                            cornerRadius = 16.dp
-                        )
-                    } else Modifier
+                    shape = RoundedCornerShape(10.dp),
+                    colors = FilterChipDefaults.filterChipColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        selectedContainerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f),
+                        labelColor = MaterialTheme.colorScheme.onSurface,
+                        selectedLabelColor = MaterialTheme.colorScheme.secondary
+                    )
                 )
             }
         }

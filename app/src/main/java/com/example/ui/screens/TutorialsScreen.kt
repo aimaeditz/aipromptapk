@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.ui.components.GlassCard
+import com.example.ui.components.saasBackgroundGlow
 import com.example.ui.viewmodel.MainViewModel
 import org.json.JSONArray
 
@@ -36,30 +37,39 @@ fun TutorialsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp)
+            .saasBackgroundGlow()
+            .padding(horizontal = 14.dp)
     ) {
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Icon(imageVector = Icons.Default.MenuBook, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-            Text(text = "AI TUTORIALS & GUIDES", fontSize = 20.sp, fontWeight = FontWeight.Black)
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f),
+                modifier = Modifier.size(32.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(imageVector = Icons.Default.MenuBook, contentDescription = null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(18.dp))
+                }
+            }
+            Text(text = "AI Tutorials & Guides", fontSize = 17.5.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
         }
         Text(
             text = "Step-by-step tutorials by AiMAEditz for 3D avatars & photo editing",
-            fontSize = 12.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            fontSize = 11.5.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(14.dp))
 
         LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
             contentPadding = PaddingValues(bottom = 24.dp)
         ) {
             items(tutorials, key = { it.id }) { tut ->
                 var expanded by remember { mutableStateOf(true) }
 
-                GlassCard(cornerRadius = 16.dp) {
+                GlassCard(cornerRadius = 14.dp) {
                     Column {
                         AsyncImage(
                             model = tut.coverImageUrl,
@@ -68,16 +78,16 @@ fun TutorialsScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(160.dp)
-                                .clip(RoundedCornerShape(12.dp))
+                                .clip(RoundedCornerShape(10.dp))
                         )
 
                         Spacer(modifier = Modifier.height(12.dp))
 
-                        Text(text = tut.title, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                        Text(text = tut.title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
 
                         Spacer(modifier = Modifier.height(6.dp))
 
-                        Text(text = tut.introduction, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, lineHeight = 18.sp)
+                        Text(text = tut.introduction, fontSize = 12.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, lineHeight = 17.sp)
 
                         Spacer(modifier = Modifier.height(12.dp))
 
@@ -88,8 +98,8 @@ fun TutorialsScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(text = "STEP-BY-STEP INSTRUCTIONS", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                            Icon(imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            Text(text = "STEP-BY-STEP INSTRUCTIONS", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary)
+                            Icon(imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
                         }
 
                         AnimatedVisibility(visible = expanded) {
@@ -105,15 +115,15 @@ fun TutorialsScreen(
                                     ) {
                                         Surface(
                                             shape = CircleShape,
-                                            color = MaterialTheme.colorScheme.primary,
+                                            color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f),
                                             modifier = Modifier.size(22.dp)
                                         ) {
                                             Box(contentAlignment = Alignment.Center) {
-                                                Text(text = "${index + 1}", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
+                                                Text(text = "${index + 1}", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary)
                                             }
                                         }
 
-                                        Text(text = step, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f), lineHeight = 18.sp)
+                                        Text(text = step, fontSize = 12.5.sp, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f), lineHeight = 17.sp)
                                     }
                                 }
                             }

@@ -26,6 +26,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.ui.components.GlassCard
+import com.example.ui.components.saasBackgroundGlow
+import com.example.ui.components.saasElevatedShadow
 import com.example.ui.viewmodel.MainViewModel
 
 @Composable
@@ -37,6 +39,7 @@ fun CreatorProfileScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .saasBackgroundGlow()
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -47,11 +50,12 @@ fun CreatorProfileScreen(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
+                .saasElevatedShadow(cornerRadius = 24.dp, elevationLevel = 2)
                 .clip(RoundedCornerShape(24.dp))
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
-                            MaterialTheme.colorScheme.primaryContainer,
+                            MaterialTheme.colorScheme.secondary.copy(alpha = 0.08f),
                             MaterialTheme.colorScheme.surface
                         )
                     )
@@ -82,7 +86,7 @@ fun CreatorProfileScreen(
                         text = "MA",
                         fontSize = 32.sp,
                         fontWeight = FontWeight.Black,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = MaterialTheme.colorScheme.secondary,
                         letterSpacing = 2.sp
                     )
                 }
@@ -91,9 +95,9 @@ fun CreatorProfileScreen(
 
                 Text(
                     text = "M ABID",
-                    fontSize = 26.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 2.sp,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 1.sp,
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
@@ -101,14 +105,14 @@ fun CreatorProfileScreen(
                     text = "Creator & Founder of AiPromptXpert",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.secondary
                 )
 
                 Spacer(modifier = Modifier.height(4.dp))
 
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = MaterialTheme.colorScheme.secondaryContainer
+                    color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f)
                 ) {
                     Text(
                         text = "Powered by AiMAEditz",
@@ -138,7 +142,7 @@ fun CreatorProfileScreen(
             text = "OFFICIAL BLOGGER PLATFORMS",
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary,
+            color = MaterialTheme.colorScheme.secondary,
             letterSpacing = 1.sp
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -156,14 +160,15 @@ fun CreatorProfileScreen(
                     }
                     Button(
                         onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://aipromptxpert.blogspot.com/"))) },
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
                         contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
                     ) {
                         Text(text = "Open Website", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
                 }
 
-                Divider()
+                Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -176,7 +181,8 @@ fun CreatorProfileScreen(
                     }
                     Button(
                         onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://aimaeditz.blogspot.com/"))) },
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                         contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
                     ) {
                         Text(text = "Open Blog", fontSize = 12.sp, fontWeight = FontWeight.Bold)
@@ -192,7 +198,7 @@ fun CreatorProfileScreen(
             text = "CONNECT WITH M ABID",
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary,
+            color = MaterialTheme.colorScheme.secondary,
             letterSpacing = 1.sp
         )
         Spacer(modifier = Modifier.height(8.dp))

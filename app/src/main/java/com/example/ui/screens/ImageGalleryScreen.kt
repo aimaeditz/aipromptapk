@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import android.content.Intent
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -32,6 +33,8 @@ import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.data.model.GalleryImage
+import com.example.ui.components.saasBackgroundGlow
+import com.example.ui.components.saasElevatedShadow
 import com.example.ui.viewmodel.MainViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -61,56 +64,88 @@ fun ImageGalleryScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp)
+            .saasBackgroundGlow()
+            .padding(horizontal = 14.dp)
     ) {
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
-        Text(
-            text = "AI IMAGE GALLERY",
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Black,
-            color = MaterialTheme.colorScheme.onBackground
-        )
+        // Header
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f),
+                modifier = Modifier.size(32.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Default.Collections,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+            Text(
+                text = "AI Image Gallery",
+                fontSize = 17.5.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+        }
         Text(
             text = "Authentic AiPromptXpert & AiMAEditz AI artworks",
-            fontSize = 12.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            fontSize = 11.5.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         // Category Filter Chips
-        androidx.compose.foundation.lazy.LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
             items(categories, key = { it }) { cat ->
+                val isSelected = selectedCategory == cat
                 FilterChip(
-                    selected = selectedCategory == cat,
+                    selected = isSelected,
                     onClick = { selectedCategory = cat },
-                    label = { Text(text = cat, fontSize = 11.sp) },
-                    shape = RoundedCornerShape(20.dp)
+                    label = { Text(text = cat, fontSize = 11.5.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium) },
+                    shape = RoundedCornerShape(10.dp),
+                    colors = FilterChipDefaults.filterChipColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        selectedContainerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f),
+                        labelColor = MaterialTheme.colorScheme.onSurface,
+                        selectedLabelColor = MaterialTheme.colorScheme.secondary
+                    )
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         LazyVerticalGrid(
             columns = GridCells.Adaptive(minSize = 150.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
             modifier = Modifier.weight(1f),
-            contentPadding = PaddingValues(bottom = 16.dp)
+            contentPadding = PaddingValues(bottom = 24.dp)
         ) {
             items(filteredImages, key = { it.id }) { img ->
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(210.dp)
-                        .clip(RoundedCornerShape(16.dp))
+                        .saasElevatedShadow(cornerRadius = 14.dp, elevationLevel = 1)
+                        .clip(RoundedCornerShape(14.dp))
                         .clickable { viewModel.selectGalleryImage(img) },
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
                     Box(modifier = Modifier.fillMaxSize()) {
                         AsyncImage(
@@ -143,13 +178,13 @@ fun ImageGalleryScreen(
                         ) {
                             Surface(
                                 shape = RoundedCornerShape(6.dp),
-                                color = MaterialTheme.colorScheme.primary
+                                color = MaterialTheme.colorScheme.secondary
                             ) {
                                 Text(
                                     text = img.promptCode,
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    color = Color.White,
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                 )
                             }

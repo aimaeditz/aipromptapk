@@ -35,6 +35,8 @@ import com.example.data.category.SmartCategoryEngine
 import com.example.data.model.PromptItem
 import com.example.ui.components.AdMobBanner
 import com.example.ui.components.PromptCard
+import com.example.ui.components.saasBackgroundGlow
+import com.example.ui.components.saasElevatedShadow
 import com.example.ui.components.subtleGlow
 import com.example.ui.viewmodel.MainViewModel
 import kotlinx.coroutines.delay
@@ -75,6 +77,7 @@ fun PromptDetailScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .saasBackgroundGlow()
             .verticalScroll(rememberScrollState())
             .padding(bottom = 24.dp)
     ) {
@@ -92,19 +95,14 @@ fun PromptDetailScreen(
 
             Surface(
                 shape = RoundedCornerShape(8.dp),
-                color = MaterialTheme.colorScheme.primaryContainer,
-                modifier = Modifier.subtleGlow(
-                    color = MaterialTheme.colorScheme.primary,
-                    radius = 4.dp,
-                    alpha = 0.2f,
-                    cornerRadius = 8.dp
-                )
+                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f),
+                modifier = Modifier.saasElevatedShadow(cornerRadius = 8.dp, elevationLevel = 1)
             ) {
                 Text(
                     text = prompt.promptCode,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Black,
-                    color = MaterialTheme.colorScheme.primary,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.secondary,
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                 )
             }
@@ -136,20 +134,16 @@ fun PromptDetailScreen(
             }
         }
 
-        // Hero Artwork Image with soft ambient glow
+        // Hero Artwork Image with SaaS dual-layer elevation
         Card(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(280.dp)
                 .padding(horizontal = 16.dp)
-                .subtleGlow(
-                    color = MaterialTheme.colorScheme.primary,
-                    radius = 10.dp,
-                    alpha = 0.15f,
-                    cornerRadius = 20.dp
-                ),
-            shape = RoundedCornerShape(20.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                .saasElevatedShadow(cornerRadius = 18.dp, elevationLevel = 2),
+            shape = RoundedCornerShape(18.dp),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             AsyncImage(
                 model = ImageRequest.Builder(context)
@@ -171,27 +165,29 @@ fun PromptDetailScreen(
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = MaterialTheme.colorScheme.primaryContainer
+                    color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f))
                 ) {
                     Text(
                         text = prompt.category,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.secondary
                     )
                 }
 
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = MaterialTheme.colorScheme.secondaryContainer
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
                 ) {
                     Text(
                         text = prompt.platform,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.secondary
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }
@@ -200,7 +196,7 @@ fun PromptDetailScreen(
 
             Text(
                 text = prompt.title,
-                fontSize = 22.sp,
+                fontSize = 21.sp,
                 fontWeight = FontWeight.ExtraBold,
                 color = MaterialTheme.colorScheme.onBackground
             )
@@ -221,12 +217,14 @@ fun PromptDetailScreen(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = 16.dp)
+                .saasElevatedShadow(cornerRadius = 18.dp, elevationLevel = 1),
             shape = RoundedCornerShape(18.dp),
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                containerColor = MaterialTheme.colorScheme.surface
             ),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f))
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.20f)),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(
@@ -241,14 +239,14 @@ fun PromptDetailScreen(
                         Icon(
                             imageVector = Icons.Default.Terminal,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
+                            tint = MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.size(18.dp)
                         )
                         Text(
                             text = "EXACT AI PROMPT CODE",
-                            fontSize = 12.sp,
+                            fontSize = 11.5.sp,
                             fontWeight = FontWeight.ExtraBold,
-                            color = MaterialTheme.colorScheme.primary
+                            color = MaterialTheme.colorScheme.secondary
                         )
                     }
 
@@ -266,9 +264,9 @@ fun PromptDetailScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.surface)
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                         .border(
-                            BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)),
+                            BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)),
                             RoundedCornerShape(12.dp)
                         )
                         .padding(14.dp)
@@ -291,20 +289,10 @@ fun PromptDetailScreen(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(48.dp)
-                        .then(
-                            if (isCopied) {
-                                Modifier.subtleGlow(
-                                    color = MaterialTheme.colorScheme.primary,
-                                    radius = 10.dp,
-                                    alpha = 0.4f,
-                                    cornerRadius = 12.dp
-                                )
-                            } else Modifier
-                        ),
+                        .height(48.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isCopied) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary
+                        containerColor = if (isCopied) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.secondary
                     )
                 ) {
                     AnimatedContent(

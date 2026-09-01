@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.ui.components.GlassCard
+import com.example.ui.components.saasBackgroundGlow
 import com.example.ui.viewmodel.MainViewModel
 
 data class AiAppItem(
@@ -118,45 +119,55 @@ fun AppsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp)
+            .saasBackgroundGlow()
+            .padding(horizontal = 14.dp)
     ) {
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Icon(
-                imageVector = Icons.Default.Apps,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
-            )
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f),
+                modifier = Modifier.size(32.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Default.Apps,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
             Text(
-                text = "AI CREATIVE APPS",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Black,
+                text = "AI Creative Apps",
+                fontSize = 17.5.sp,
+                fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
             )
         }
 
         Text(
             text = "Official creative applications & generative AI platforms",
-            fontSize = 12.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            fontSize = 11.5.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(14.dp))
 
         LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
             contentPadding = PaddingValues(bottom = 24.dp)
         ) {
             items(aiAppsList, key = { it.id }) { app ->
-                GlassCard(cornerRadius = 16.dp) {
+                GlassCard(cornerRadius = 14.dp) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         AsyncImage(
                             model = ImageRequest.Builder(context)
@@ -167,7 +178,7 @@ fun AppsScreen(
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
                                 .size(54.dp)
-                                .clip(RoundedCornerShape(12.dp))
+                                .clip(RoundedCornerShape(10.dp))
                         )
 
                         Column(modifier = Modifier.weight(1f)) {
@@ -177,21 +188,21 @@ fun AppsScreen(
                             ) {
                                 Text(
                                     text = app.name,
-                                    fontSize = 15.sp,
+                                    fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
 
                                 Surface(
-                                    shape = RoundedCornerShape(6.dp),
-                                    color = MaterialTheme.colorScheme.secondaryContainer
+                                    shape = RoundedCornerShape(4.dp),
+                                    color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f)
                                 ) {
                                     Text(
                                         text = app.badge,
-                                        fontSize = 10.sp,
+                                        fontSize = 9.5.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.secondary,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
                                     )
                                 }
                             }
@@ -202,37 +213,38 @@ fun AppsScreen(
                                 text = app.platform.uppercase(),
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
+                                color = MaterialTheme.colorScheme.secondary
                             )
 
                             Spacer(modifier = Modifier.height(3.dp))
 
                             Text(
                                 text = app.description,
-                                fontSize = 12.sp,
+                                fontSize = 11.5.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis,
-                                lineHeight = 16.sp
+                                lineHeight = 15.sp
                             )
 
-                            Spacer(modifier = Modifier.height(10.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
 
                             Button(
                                 onClick = {
                                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse(app.websiteUrl))
                                     context.startActivity(intent)
                                 },
-                                shape = RoundedCornerShape(10.dp),
-                                modifier = Modifier.height(36.dp),
-                                contentPadding = PaddingValues(horizontal = 14.dp)
+                                shape = RoundedCornerShape(8.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
+                                modifier = Modifier.height(32.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp)
                             ) {
-                                Text(text = "Open App", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text(text = "Open App", fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Icon(
                                     imageVector = Icons.Default.OpenInNew,
                                     contentDescription = null,
-                                    modifier = Modifier.size(14.dp)
+                                    modifier = Modifier.size(13.dp)
                                 )
                             }
                         }

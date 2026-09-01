@@ -53,10 +53,12 @@ fun BottomNavBar(
     )
 
     NavigationBar(
-        modifier = Modifier.navigationBarsPadding(),
-        containerColor = MaterialTheme.colorScheme.surface,
+        modifier = Modifier
+            .navigationBarsPadding()
+            .saasElevatedShadow(cornerRadius = 0.dp, elevationLevel = 2),
+        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
         contentColor = MaterialTheme.colorScheme.onSurface,
-        tonalElevation = 2.dp
+        tonalElevation = 0.dp
     ) {
         items.forEach { screen ->
             val isSelected = currentRoute == screen.route

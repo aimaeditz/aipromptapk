@@ -28,6 +28,8 @@ import com.example.data.category.SmartCategoryEngine
 import com.example.data.model.PromptItem
 import com.example.ui.components.AdMobBanner
 import com.example.ui.components.PromptCard
+import com.example.ui.components.saasBackgroundGlow
+import com.example.ui.components.saasElevatedShadow
 import com.example.ui.viewmodel.MainViewModel
 
 @Composable
@@ -98,6 +100,7 @@ fun HomeScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .saasBackgroundGlow()
                     .padding(24.dp),
                 contentAlignment = Alignment.Center
             ) {
@@ -108,7 +111,7 @@ fun HomeScreen(
                     CircularProgressIndicator(
                         modifier = Modifier.size(32.dp),
                         strokeWidth = 3.dp,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.secondary
                     )
                     Text(
                         text = "Loading prompts...",
@@ -122,7 +125,9 @@ fun HomeScreen(
             LazyVerticalGrid(
                 columns = GridCells.Fixed(columnCount),
                 state = gridState,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .saasBackgroundGlow(),
                 contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 8.dp, bottom = 24.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -133,13 +138,14 @@ fun HomeScreen(
                         modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        // 1. Compact Search Bar
+                        // 1. Compact Search Bar with SaaS Elevation
                         Surface(
-                            shape = RoundedCornerShape(10.dp),
+                            shape = RoundedCornerShape(12.dp),
                             color = MaterialTheme.colorScheme.surface,
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)),
-                            shadowElevation = 0.5.dp,
-                            modifier = Modifier.fillMaxWidth()
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .saasElevatedShadow(cornerRadius = 12.dp, elevationLevel = 1)
                         ) {
                             Row(
                                 modifier = Modifier
@@ -150,8 +156,8 @@ fun HomeScreen(
                                 Icon(
                                     imageVector = Icons.Outlined.Search,
                                     contentDescription = "Search",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(18.dp)
+                                    tint = MaterialTheme.colorScheme.secondary,
+                                    modifier = Modifier.size(19.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 TextField(
@@ -211,21 +217,21 @@ fun HomeScreen(
                                             Text(
                                                 text = category,
                                                 fontSize = 12.sp,
-                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                                             )
                                         },
-                                        shape = RoundedCornerShape(8.dp),
+                                        shape = RoundedCornerShape(10.dp),
                                         border = BorderStroke(
                                             width = 1.dp,
-                                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                                            color = if (isSelected) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)
                                         ),
                                         colors = FilterChipDefaults.filterChipColors(
                                             containerColor = MaterialTheme.colorScheme.surface,
-                                            selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                                            selectedContainerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f),
                                             labelColor = MaterialTheme.colorScheme.onSurface,
-                                            selectedLabelColor = MaterialTheme.colorScheme.primary
+                                            selectedLabelColor = MaterialTheme.colorScheme.secondary
                                         ),
-                                        modifier = Modifier.height(32.dp)
+                                        modifier = Modifier.height(34.dp)
                                     )
                                 }
                             }
@@ -235,21 +241,28 @@ fun HomeScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(top = 2.dp, bottom = 2.dp),
+                                .padding(top = 4.dp, bottom = 2.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
                                 text = if (selectedCategory == "All") "All Prompts" else selectedCategory,
-                                fontSize = 14.sp,
+                                fontSize = 14.5.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onBackground
                             )
-                            Text(
-                                text = "${filteredPrompts.size} prompts",
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.08f)
+                            ) {
+                                Text(
+                                    text = "${filteredPrompts.size} prompts",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.secondary,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                )
+                            }
                         }
                     }
                 }

@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.sp
 import com.example.data.model.PromptItem
 import com.example.ui.components.PromptCard
 import com.example.ui.components.SearchBarInput
+import com.example.ui.components.saasBackgroundGlow
 import com.example.ui.viewmodel.MainViewModel
 
 @Composable
@@ -55,6 +56,7 @@ fun SearchScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .saasBackgroundGlow()
             .padding(horizontal = 14.dp)
     ) {
         Spacer(modifier = Modifier.height(10.dp))
@@ -74,7 +76,7 @@ fun SearchScreen(
 
             Text(
                 text = "Search Prompts",
-                fontSize = 17.sp,
+                fontSize = 17.5.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
             )
@@ -98,18 +100,22 @@ fun SearchScreen(
             contentPadding = PaddingValues(bottom = 6.dp)
         ) {
             items(quickTags, key = { it }) { tag ->
-                SuggestionChip(
+                val isSelected = searchQuery.equals(tag, ignoreCase = true)
+                FilterChip(
+                    selected = isSelected,
                     onClick = { viewModel.setSearchQuery(tag) },
-                    label = { Text(text = tag, fontSize = 11.sp) },
-                    shape = RoundedCornerShape(16.dp),
-                    colors = SuggestionChipDefaults.suggestionChipColors(
-                        containerColor = if (searchQuery.equals(tag, ignoreCase = true)) {
-                            MaterialTheme.colorScheme.primaryContainer
-                        } else {
-                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
-                        }
+                    label = { Text(text = tag, fontSize = 11.5.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium) },
+                    shape = RoundedCornerShape(10.dp),
+                    colors = FilterChipDefaults.filterChipColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        selectedContainerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f),
+                        labelColor = MaterialTheme.colorScheme.onSurface,
+                        selectedLabelColor = MaterialTheme.colorScheme.secondary
                     ),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
+                    border = BorderStroke(
+                        1.dp,
+                        if (isSelected) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)
+                    )
                 )
             }
         }

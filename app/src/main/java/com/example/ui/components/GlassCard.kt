@@ -20,23 +20,24 @@ import androidx.compose.ui.unit.dp
 fun GlassCard(
     modifier: Modifier = Modifier,
     cornerRadius: Dp = 16.dp,
-    borderAlpha: Float = 0.35f,
+    borderAlpha: Float = 0.25f,
     onClick: (() -> Unit)? = null,
     content: @Composable () -> Unit
 ) {
     val shape = RoundedCornerShape(cornerRadius)
     val borderBrush = Brush.linearGradient(
         colors = listOf(
-            MaterialTheme.colorScheme.primary.copy(alpha = borderAlpha),
-            MaterialTheme.colorScheme.outline.copy(alpha = borderAlpha * 0.5f),
-            MaterialTheme.colorScheme.primary.copy(alpha = borderAlpha * 0.15f)
+            MaterialTheme.colorScheme.primary.copy(alpha = borderAlpha * 0.4f),
+            MaterialTheme.colorScheme.outline.copy(alpha = borderAlpha * 0.8f),
+            MaterialTheme.colorScheme.secondary.copy(alpha = borderAlpha * 0.25f)
         )
     )
 
     Box(
         modifier = modifier
+            .saasElevatedShadow(cornerRadius = cornerRadius, elevationLevel = 1)
             .clip(shape)
-            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.92f))
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.94f))
             .border(BorderStroke(1.dp, borderBrush), shape)
             .then(
                 if (onClick != null) {

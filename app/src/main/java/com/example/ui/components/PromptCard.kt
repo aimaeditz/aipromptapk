@@ -57,13 +57,14 @@ fun PromptCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
+            .saasElevatedShadow(cornerRadius = 14.dp, elevationLevel = 1)
+            .clip(RoundedCornerShape(14.dp))
             .clickable { onPromptClick() },
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp)
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column {
             // Clean Compact Image (No bulky overlays or technical badges)
@@ -71,7 +72,7 @@ fun PromptCard(
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
                         .data(prompt.imageUrl)
-                        .crossfade(100)
+                        .crossfade(120)
                         .memoryCachePolicy(CachePolicy.ENABLED)
                         .diskCachePolicy(CachePolicy.ENABLED)
                         .build(),
@@ -79,19 +80,19 @@ fun PromptCard(
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(115.dp)
+                        .height(130.dp)
                 )
             }
 
             // Compact Content Area
             Column(
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(5.dp)
             ) {
                 // Prompt Title
                 Text(
                     text = displayTitle,
-                    fontSize = 13.sp,
+                    fontSize = 13.5.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
@@ -101,14 +102,14 @@ fun PromptCard(
                 // Short Prompt Preview
                 Text(
                     text = displayPreview,
-                    fontSize = 11.sp,
+                    fontSize = 11.5.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
-                    lineHeight = 14.5.sp
+                    lineHeight = 15.5.sp
                 )
 
-                Spacer(modifier = Modifier.height(2.dp))
+                Spacer(modifier = Modifier.height(3.dp))
 
                 // Action Bar: Copy | Save
                 Row(
@@ -116,7 +117,7 @@ fun PromptCard(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Copy Button
+                    // Copy Button with brand gradient feel
                     Button(
                         onClick = {
                             isCopied = true
@@ -124,12 +125,12 @@ fun PromptCard(
                         },
                         modifier = Modifier
                             .weight(1f)
-                            .height(30.dp),
-                        shape = RoundedCornerShape(6.dp),
+                            .height(32.dp),
+                        shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = if (isCopied) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary
                         ),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp)
                     ) {
                         AnimatedContent(
                             targetState = isCopied,
@@ -145,12 +146,12 @@ fun PromptCard(
                                 Icon(
                                     imageVector = if (copied) Icons.Default.Check else Icons.Default.ContentCopy,
                                     contentDescription = null,
-                                    modifier = Modifier.size(12.dp)
+                                    modifier = Modifier.size(13.dp)
                                 )
-                                Spacer(modifier = Modifier.width(4.dp))
+                                Spacer(modifier = Modifier.width(5.dp))
                                 Text(
                                     text = if (copied) "Copied ✓" else "Copy",
-                                    fontSize = 11.sp,
+                                    fontSize = 11.5.sp,
                                     fontWeight = FontWeight.Bold
                                 )
                             }
@@ -160,15 +161,15 @@ fun PromptCard(
                     // Save Button
                     OutlinedButton(
                         onClick = onFavoriteClick,
-                        modifier = Modifier.height(30.dp),
-                        shape = RoundedCornerShape(6.dp),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                        modifier = Modifier.height(32.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
                         border = BorderStroke(
                             1.dp,
-                            if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
+                            if (isFavorite) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outline.copy(alpha = 0.20f)
                         ),
                         colors = ButtonDefaults.outlinedButtonColors(
-                            containerColor = if (isFavorite) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surface
+                            containerColor = if (isFavorite) MaterialTheme.colorScheme.secondary.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surface
                         )
                     ) {
                         Row(
@@ -178,15 +179,15 @@ fun PromptCard(
                             Icon(
                                 imageVector = if (isFavorite) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
                                 contentDescription = if (isFavorite) "Saved" else "Save",
-                                modifier = Modifier.size(13.dp),
-                                tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                modifier = Modifier.size(14.dp),
+                                tint = if (isFavorite) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 text = if (isFavorite) "Saved" else "Save",
-                                fontSize = 11.sp,
+                                fontSize = 11.5.sp,
                                 fontWeight = if (isFavorite) FontWeight.Bold else FontWeight.Medium,
-                                color = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                color = if (isFavorite) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurface
                             )
                         }
                     }

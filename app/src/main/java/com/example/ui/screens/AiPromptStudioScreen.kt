@@ -20,6 +20,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.GeneratorOptions
 import com.example.ui.components.GlassCard
+import com.example.ui.components.saasBackgroundGlow
+import com.example.ui.components.saasElevatedShadow
 import com.example.ui.viewmodel.MainViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -57,37 +59,50 @@ fun AiPromptStudioScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .saasBackgroundGlow()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .padding(horizontal = 14.dp, vertical = 10.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Icon(imageVector = Icons.Default.AutoFixHigh, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-            Text(text = "AI PROMPT STUDIO", fontSize = 22.sp, fontWeight = FontWeight.Black)
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f),
+                modifier = Modifier.size(32.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(imageVector = Icons.Default.AutoFixHigh, contentDescription = null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(18.dp))
+                }
+            }
+            Text(text = "AI Prompt Studio", fontSize = 17.5.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
         }
-        Text(text = "Craft, enhance & format custom AI image prompts for Gemini, Bing & Midjourney", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(text = "Craft, enhance & format custom AI image prompts for Gemini, Bing & Midjourney", fontSize = 11.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f))
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(14.dp))
 
         // Tab Selector
         TabRow(
             selectedTabIndex = selectedToolTab,
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-            modifier = Modifier.clip(RoundedCornerShape(12.dp))
+            containerColor = MaterialTheme.colorScheme.surface,
+            modifier = Modifier
+                .clip(RoundedCornerShape(12.dp))
+                .saasElevatedShadow(cornerRadius = 12.dp, elevationLevel = 1)
         ) {
             toolTabs.forEachIndexed { index, title ->
                 Tab(
                     selected = selectedToolTab == index,
                     onClick = { selectedToolTab = index },
-                    text = { Text(text = title, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+                    text = { Text(text = title, fontSize = 12.sp, fontWeight = if (selectedToolTab == index) FontWeight.Bold else FontWeight.Medium) },
+                    selectedContentColor = MaterialTheme.colorScheme.secondary,
+                    unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(14.dp))
 
         if (selectedToolTab == 0) {
             // PROMPT GENERATOR FORM
-            GlassCard(cornerRadius = 16.dp) {
+            GlassCard(cornerRadius = 14.dp) {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(text = "CUSTOM PROMPT GENERATOR", fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary)
 

@@ -44,45 +44,79 @@ fun AppTopBar(
     )
 
     Surface(
-        color = MaterialTheme.colorScheme.background,
-        tonalElevation = 1.dp
+        color = MaterialTheme.colorScheme.surface.copy(alpha = if (isDarkTheme) 0.96f else 0.94f),
+        modifier = Modifier
+            .fillMaxWidth()
+            .saasElevatedShadow(cornerRadius = 0.dp, elevationLevel = 1)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .statusBarsPadding()
-                .padding(horizontal = 14.dp, vertical = 6.dp),
+                .padding(horizontal = 14.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Compact Brand Logo + Title + PRO Badge (Tappable for fast refresh)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))
                     .clickable { onLogoClick() }
-                    .padding(vertical = 4.dp)
+                    .padding(vertical = 2.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.AutoAwesome,
-                    contentDescription = "AiPromptXpert Logo",
-                    tint = MaterialTheme.colorScheme.primary,
+                Box(
                     modifier = Modifier
-                        .size(20.dp)
-                        .graphicsLayer {
-                            if (isRefreshing) {
-                                rotationZ = spinAngle
+                        .size(28.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(
+                            Brush.linearGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.secondary,
+                                    MaterialTheme.colorScheme.primary
+                                )
+                            )
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AutoAwesome,
+                        contentDescription = "AiPromptXpert Logo",
+                        tint = androidx.compose.ui.graphics.Color.White,
+                        modifier = Modifier
+                            .size(16.dp)
+                            .graphicsLayer {
+                                if (isRefreshing) {
+                                    rotationZ = spinAngle
+                                }
                             }
-                        }
-                )
+                    )
+                }
 
-                Text(
-                    text = "AiPromptXpert",
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "AiPrompt",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                        Text(
+                            text = "Xpert",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.secondary
+                        )
+                    }
+                    Text(
+                        text = "Powered by AiMAEditz",
+                        fontSize = 8.5.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        lineHeight = 9.sp
+                    )
+                }
 
                 // Compact PRO Badge
                 Box(
@@ -97,7 +131,7 @@ fun AppTopBar(
                 ) {
                     Text(
                         text = "PRO",
-                        fontSize = 9.sp,
+                        fontSize = 8.5.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onPrimary
                     )

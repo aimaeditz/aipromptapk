@@ -25,6 +25,8 @@ import androidx.compose.ui.unit.sp
 import com.example.data.category.SmartCategoryEngine
 import com.example.data.model.SmartCategory
 import com.example.ui.components.SearchBarInput
+import com.example.ui.components.saasBackgroundGlow
+import com.example.ui.components.saasElevatedShadow
 import com.example.ui.viewmodel.MainViewModel
 
 @Composable
@@ -57,6 +59,7 @@ fun CategoriesScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .saasBackgroundGlow()
             .padding(horizontal = 14.dp, vertical = 6.dp)
             .testTag("categories_screen")
     ) {
@@ -74,14 +77,14 @@ fun CategoriesScreen(
             ) {
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                    color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f),
                     modifier = Modifier.size(32.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = Icons.Default.Folder,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
+                            tint = MaterialTheme.colorScheme.secondary,
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -98,14 +101,14 @@ fun CategoriesScreen(
             if (!isInitialLoading || realCategories.isNotEmpty()) {
                 Surface(
                     shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                    color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.08f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f))
                 ) {
                     Text(
                         text = "${displayCategories.size} folders",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp)
                     )
                 }
@@ -247,20 +250,21 @@ fun CategoryFolderCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .saasElevatedShadow(cornerRadius = 14.dp, elevationLevel = 1)
+            .clip(RoundedCornerShape(14.dp))
             .clickable { onClick() }
             .testTag("category_folder_${category.name.lowercase()}"),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.22f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp)
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 12.dp)
+                .padding(horizontal = 13.dp, vertical = 13.dp)
         ) {
             // Top Row: Small Folder Icon / Emoji + Prompt Count Badge
             Row(
@@ -270,32 +274,32 @@ fun CategoryFolderCard(
             ) {
                 // Folder / Subject Visual Icon
                 Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
-                    modifier = Modifier.size(32.dp)
+                    shape = RoundedCornerShape(10.dp),
+                    color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f),
+                    modifier = Modifier.size(34.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         val icon = getCategoryVectorIcon(category.iconKey)
                         Icon(
                             imageVector = icon,
                             contentDescription = category.displayName,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(18.dp)
+                            tint = MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.size(19.dp)
                         )
                     }
                 }
 
                 // Prompt Count Pill
                 Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.08f)
                 ) {
                     Text(
                         text = "${category.promptCount} ${if (category.promptCount == 1) "prompt" else "prompts"}",
-                        fontSize = 10.5.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        color = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
                     )
                 }
             }
@@ -305,29 +309,30 @@ fun CategoryFolderCard(
             // Category Display Name
             Text(
                 text = category.displayName,
-                fontSize = 14.5.sp,
+                fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
 
-            Spacer(modifier = Modifier.height(2.dp))
+            Spacer(modifier = Modifier.height(3.dp))
 
             // Subtle "Explore collection" link text or folder hint
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(3.dp)
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(
-                    text = "View collection",
-                    fontSize = 10.5.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                    text = "Explore collection",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.secondary
                 )
                 Icon(
                     imageVector = Icons.Default.ChevronRight,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    tint = MaterialTheme.colorScheme.secondary,
                     modifier = Modifier.size(12.dp)
                 )
             }

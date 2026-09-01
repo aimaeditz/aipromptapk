@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.sp
 import com.example.data.model.PromptItem
 import com.example.ui.components.PromptCard
 import com.example.ui.components.SearchBarInput
+import com.example.ui.components.saasBackgroundGlow
 import com.example.ui.components.subtleGlow
 import com.example.ui.viewmodel.MainViewModel
 
@@ -87,6 +88,7 @@ fun PromptLibraryScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .saasBackgroundGlow()
             .padding(horizontal = 14.dp)
     ) {
         Spacer(modifier = Modifier.height(8.dp))
@@ -110,16 +112,14 @@ fun PromptLibraryScreen(
                 FilterChip(
                     selected = isSelected,
                     onClick = { viewModel.setCategory(category) },
-                    label = { Text(text = category, fontSize = 11.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal) },
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = if (isSelected) {
-                        Modifier.subtleGlow(
-                            color = MaterialTheme.colorScheme.primary,
-                            radius = 4.dp,
-                            alpha = 0.2f,
-                            cornerRadius = 16.dp
-                        )
-                    } else Modifier
+                    label = { Text(text = category, fontSize = 11.5.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium) },
+                    shape = RoundedCornerShape(10.dp),
+                    colors = FilterChipDefaults.filterChipColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        selectedContainerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f),
+                        labelColor = MaterialTheme.colorScheme.onSurface,
+                        selectedLabelColor = MaterialTheme.colorScheme.secondary
+                    )
                 )
             }
         }
@@ -136,16 +136,14 @@ fun PromptLibraryScreen(
                 FilterChip(
                     selected = isSelected,
                     onClick = { viewModel.setPlatform(plat) },
-                    label = { Text(text = "Platform: $plat", fontSize = 10.5.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal) },
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = if (isSelected) {
-                        Modifier.subtleGlow(
-                            color = MaterialTheme.colorScheme.secondary,
-                            radius = 4.dp,
-                            alpha = 0.2f,
-                            cornerRadius = 16.dp
-                        )
-                    } else Modifier
+                    label = { Text(text = "Platform: $plat", fontSize = 10.5.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium) },
+                    shape = RoundedCornerShape(10.dp),
+                    colors = FilterChipDefaults.filterChipColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
+                        labelColor = MaterialTheme.colorScheme.onSurface,
+                        selectedLabelColor = MaterialTheme.colorScheme.primary
+                    )
                 )
             }
         }
@@ -166,7 +164,7 @@ fun PromptLibraryScreen(
                     CircularProgressIndicator(
                         modifier = Modifier.size(32.dp),
                         strokeWidth = 3.dp,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.secondary
                     )
                     Text(
                         text = "Loading prompts...",
